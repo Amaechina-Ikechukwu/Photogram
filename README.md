@@ -1,53 +1,74 @@
-> Edited for use in IDX on 07/09/12
+📸 Photogram
 
-# Welcome to your Expo app 👋
+Photogram is a modern image-sharing app built with Expo React Native and Firebase. Users can easily upload, view, and share photos in a clean, social-style feed. The app automatically strips EXIF data from uploaded images to protect user privacy.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+✨ Features
 
-## Get started
+📷 Image Uploads – Snap or choose images from your gallery and upload instantly.
 
-#### Android
+🔒 Privacy First – EXIF metadata (location, camera details, etc.) is removed from all uploads.
 
-Android previews are defined as a `workspace.onStart` hook and started as a vscode task when the workspace is opened/started.
+🔥 Firebase Integration – Secure authentication, storage, and real-time database.
 
-Note, if you can't find the task, either:
-- Rebuild the environment (using command palette: `IDX: Rebuild Environment`), or
-- Run `npm run android -- --tunnel` command manually run android and see the output in your terminal. The device should pick up this new command and switch to start displaying the output from it.
+🌙 Dark & Light Mode – Seamless theme switching for user preference.
 
-In the output of this command/task, you'll find options to open the app in a
+🚀 Cross-Platform – Runs on both iOS and Android with a single Expo codebase.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+🛠️ Tech Stack
 
-You'll also find options to open the app's developer menu, reload the app, and more.
+Frontend: Expo React Native
 
-#### Web
+Backend & Storage: Firebase (Auth, Firestore, Storage, Cloud Functions)
 
-Web previews will be started and managred automatically. Use the toolbar to manually refresh.
+Image Processing: Python Cloud Functions (Pillow) for EXIF data removal
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+📦 Installation & Setup
 
-## Get a fresh project
+Clone the repo
 
-When you're ready, run:
+git clone https://github.com/yourusername/photogram.git
+cd photogram
 
-```bash
-npm run reset-project
-```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Install dependencies
 
-## Learn more
+npm install
+# or
+yarn install
 
-To learn more about developing your project with Expo, look at the following resources:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Configure Firebase
 
-## Join the community
+Add your Firebase project credentials in firebaseConfig.js (or .env).
 
-Join our community of developers creating universal apps.
+Enable Authentication, Firestore, and Storage in Firebase Console.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Run locally
+
+npx expo start
+
+
+Deploy Cloud Function (Python)
+
+Make sure you have the Firebase CLI installed.
+
+Deploy the EXIF-stripping function:
+
+firebase deploy --only functions
+
+
+🚧 Roadmap
+
+✅ Basic image uploads
+
+✅ EXIF stripping for privacy
+
+⏳ User profiles & followers
+
+⏳ Like & comment system
+
+⏳ Push notifications
+
+📜 License
+
+MIT License – feel free to use and modify for your own projects.
