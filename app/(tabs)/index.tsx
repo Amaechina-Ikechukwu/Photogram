@@ -3,63 +3,63 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, View } from 'react-native';
+import { Dimensions, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 
 // Firebase
-import { app } from '@/firebaseConfig';
-import { getDownloadURL, getStorage, listAll, ref } from 'firebase/storage';
+import { auth, storage } from '@/firebaseConfig';
+import { getDownloadURL, listAll, ref } from 'firebase/storage';
 
 const screenWidth = Dimensions.get("window").width;
-const columnWidth = screenWidth / 2 - 12; // padding for spacing
+const columnWidth = screenWidth / 2.3 - 16; // 2 columns with spacing
 
 export default function PhotosScreen() {
   const [photos, setPhotos] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchPhotos = async () => {
+    try {
+      const listRef = ref(storage, `photos/${auth?.currentUser?.uid}`);
+      const result = await listAll(listRef);
+      const urls = await Promise.all(result.items.map((item) => getDownloadURL(item)));
+      setPhotos(urls);
+    } catch (error) {
+      console.error('Error fetching photos:', error);
+    }
+  };
 
   useEffect(() => {
-    const fetchPhotos = async () => {
-      try {
-        const storage = getStorage(app);
-        const listRef = ref(storage, 'photos/');
-        const result = await listAll(listRef);
-
-        const urls = await Promise.all(result.items.map((item) => getDownloadURL(item)));
-        setPhotos(urls);
-      } catch (error) {
-        console.error('Error fetching photos:', error);
-      }
-    };
-
     fetchPhotos();
-  }, []);
+  }, [auth?.currentUser?.uid]);
 
-  if (photos.length === 0) {
-    return (
-      <ThemedView style={styles.center}>
-        <ThemedText type="subtitle">No photos yet 📷</ThemedText>
-      </ThemedView>
-    );
-  }
-
-  // Separate photos into two columns
-  const leftColumn: string[] = [];
-  const rightColumn: string[] = [];
-  photos.slice(1).forEach((url, index) => {
-    if (index % 2 === 0) {
-      leftColumn.push(url);
-    } else {
-      rightColumn.push(url);
+  // Re-fetch when the `refresh` search param changes (used after uploads)
+  const searchParams = useLocalSearchParams() as { refresh?: string };
+  useEffect(() => {
+    if (searchParams?.refresh) {
+     onRefresh()
     }
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams?.refresh]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchPhotos();
+    setRefreshing(false);
+  };
 
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
-        <Image
-          source={{ uri: photos[0] }}
-          style={styles.headerImage}
-          contentFit="cover"
-        />
+        photos.length > 0 ? (
+          <Image
+            source={{ uri: photos[0] }}
+            style={styles.headerImage}
+            contentFit="cover"
+          />
+        ) : (
+          <ThemedView style={styles.headerImage} />
+        )
       }
     >
       <ThemedView style={styles.gridContainer}>
@@ -67,29 +67,31 @@ export default function PhotosScreen() {
           Recent Uploads
         </ThemedText>
 
-        <ScrollView contentContainerStyle={styles.masonryContainer}>
-          <View style={styles.column}>
-            {leftColumn.map((url, idx) => (
-              <Image
-                key={`left-${idx}`}
-                source={{ uri: url }}
-                style={[styles.photo, { height: 150 + (idx % 3) * 40 }]} // variable heights for "bento" feel
-                contentFit="cover"
-              />
-            ))}
-          </View>
-
-          <View style={styles.column}>
-            {rightColumn.map((url, idx) => (
-              <Image
-                key={`right-${idx}`}
-                source={{ uri: url }}
-                style={[styles.photo, { height: 150 + (idx % 2) * 60 }]}
-                contentFit="cover"
-              />
-            ))}
-          </View>
-        </ScrollView>
+        <FlatList
+          data={photos}
+          keyExtractor={(item, idx) => item || String(idx)}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={[
+            styles.listContent,
+            photos.length === 0 && styles.emptyContent,
+          ]}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          ListEmptyComponent={
+            <ThemedText type="subtitle">No photos yet 📷</ThemedText>
+          }
+          renderItem={({ item }) => (
+            <Image
+              source={{ uri: item }}
+              style={[
+                styles.photo,
+                { width: columnWidth, height: columnWidth }, // square
+              ]}
+              contentFit="cover"
+            />
+          )}
+        />
       </ThemedView>
     </ParallaxScrollView>
   );
@@ -97,7 +99,7 @@ export default function PhotosScreen() {
 
 const styles = StyleSheet.create({
   headerImage: {
-    height: 220,
+    height: "100%",
     width: '100%',
   },
   gridContainer: {
@@ -107,23 +109,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 8,
   },
-  masonryContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  listContent: {
     paddingHorizontal: 8,
   },
-  column: {
-    flex: 1,
-    gap: 8,
+  row: {
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
-  photo: {
-    width: columnWidth,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  center: {
-    flex: 1,
+  emptyContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  photo: {
+    borderRadius: 12,
   },
 });

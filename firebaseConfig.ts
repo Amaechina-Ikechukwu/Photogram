@@ -1,8 +1,10 @@
 // Import the functions you need
 import { getApp, getApps, initializeApp } from "firebase/app";
+import { //@ts-ignore
+    getReactNativePersistence, initializeAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 // Your Firebase config object (from Firebase Console > Project Settings)
 const firebaseConfig = {
   apiKey:process.env.EXPO_PUBLIC_API_KEY,
@@ -14,9 +16,13 @@ const firebaseConfig = {
 };
 
 // Prevent re-initialization in Expo fast refresh
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const app = initializeApp(firebaseConfig);
 
 // Firebase services
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
+
 const storage = getStorage(app);
 const db = getFirestore(app);
 

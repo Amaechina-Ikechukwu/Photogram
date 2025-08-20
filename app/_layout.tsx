@@ -9,7 +9,8 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 
 // Firebase
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { app } from '@/firebaseConfig';
+import { app, auth } from '@/firebaseConfig';
+import { ActivityIndicator } from 'react-native';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -21,7 +22,6 @@ export default function RootLayout() {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const auth = getAuth(app);
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setAuthChecked(true);
@@ -38,10 +38,14 @@ export default function RootLayout() {
     return () => unsubscribe();
   }, []);
 
-  if (!loaded || !authChecked) {
+  if (!loaded) {
     // Wait until fonts + auth state are loaded
-    return null;
+    return <ActivityIndicator/>;
   }
+  // if ( !authChecked) {
+  //   // Wait until fonts + auth state are loaded
+  //   return <ActivityIndicator size={'large'}/>;
+  // }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -50,8 +54,8 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
         {/* Public screens */}
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="signup" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
 
         {/* Fallback */}
         <Stack.Screen name="+not-found" />
