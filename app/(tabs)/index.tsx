@@ -1,75 +1,129 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { Image } from 'expo-image';
+import { useEffect, useState } from 'react';
+import { Dimensions, ScrollView, StyleSheet, View } from 'react-native';
 
-export default function HomeScreen() {
+// Firebase
+import { app } from '@/firebaseConfig';
+import { getDownloadURL, getStorage, listAll, ref } from 'firebase/storage';
+
+const screenWidth = Dimensions.get("window").width;
+const columnWidth = screenWidth / 2 - 12; // padding for spacing
+
+export default function PhotosScreen() {
+  const [photos, setPhotos] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchPhotos = async () => {
+      try {
+        const storage = getStorage(app);
+        const listRef = ref(storage, 'photos/');
+        const result = await listAll(listRef);
+
+        const urls = await Promise.all(result.items.map((item) => getDownloadURL(item)));
+        setPhotos(urls);
+      } catch (error) {
+        console.error('Error fetching photos:', error);
+      }
+    };
+
+    fetchPhotos();
+  }, []);
+
+  if (photos.length === 0) {
+    return (
+      <ThemedView style={styles.center}>
+        <ThemedText type="subtitle">No photos yet 📷</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  // Separate photos into two columns
+  const leftColumn: string[] = [];
+  const rightColumn: string[] = [];
+  photos.slice(1).forEach((url, index) => {
+    if (index % 2 === 0) {
+      leftColumn.push(url);
+    } else {
+      rightColumn.push(url);
+    }
+  });
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
         <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+          source={{ uri: photos[0] }}
+          style={styles.headerImage}
+          contentFit="cover"
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
+      }
+    >
+      <ThemedView style={styles.gridContainer}>
+        <ThemedText type="title" style={styles.sectionTitle}>
+          Recent Uploads
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
+
+        <ScrollView contentContainerStyle={styles.masonryContainer}>
+          <View style={styles.column}>
+            {leftColumn.map((url, idx) => (
+              <Image
+                key={`left-${idx}`}
+                source={{ uri: url }}
+                style={[styles.photo, { height: 150 + (idx % 3) * 40 }]} // variable heights for "bento" feel
+                contentFit="cover"
+              />
+            ))}
+          </View>
+
+          <View style={styles.column}>
+            {rightColumn.map((url, idx) => (
+              <Image
+                key={`right-${idx}`}
+                source={{ uri: url }}
+                style={[styles.photo, { height: 150 + (idx % 2) * 60 }]}
+                contentFit="cover"
+              />
+            ))}
+          </View>
+        </ScrollView>
       </ThemedView>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  headerImage: {
+    height: 220,
+    width: '100%',
+  },
+  gridContainer: {
+    marginTop: 10,
+  },
+  sectionTitle: {
+    marginBottom: 10,
+    marginLeft: 8,
+  },
+  masonryContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+  },
+  column: {
+    flex: 1,
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
+  photo: {
+    width: columnWidth,
+    borderRadius: 12,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
