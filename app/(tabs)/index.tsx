@@ -3,8 +3,10 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
+import { Pressable } from 'react-native';
 import { Dimensions, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 
 // Firebase
 import { auth, storage } from '@/firebaseConfig';
@@ -75,12 +77,18 @@ export default function PhotosScreen() {
           contentContainerStyle={[
             styles.listContent,
             photos.length === 0 && styles.emptyContent,
+          {gap:10}
           ]}
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={
-            <ThemedText type="subtitle">No photos yet 📷</ThemedText>
-          }
+              <ThemedView style={styles.emptyWrap}>
+                <ThemedText type="subtitle" style={{ marginBottom: 12 }}>No photos yet 📷</ThemedText>
+                <Pressable style={styles.cta} onPress={() => router.push('/(tabs)/upload')}>
+                  <ThemedText style={styles.ctaText}>Upload your first photo</ThemedText>
+                </Pressable>
+              </ThemedView>
+            }
           renderItem={({ item }) => (
             <Image
               source={{ uri: item }}
@@ -109,12 +117,28 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 8,
   },
+  emptyWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  cta: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  ctaText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
   listContent: {
     paddingHorizontal: 8,
   },
   row: {
     justifyContent: 'space-between',
     marginBottom: 16,
+    gap:10
   },
   emptyContent: {
     flexGrow: 1,

@@ -11,6 +11,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { app, auth } from '@/firebaseConfig';
 import { ActivityIndicator } from 'react-native';
+import { ToastProvider } from '@/components/ToastProvider';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -49,18 +50,20 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        {/* Tabs are protected, only for logged-in users */}
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <ToastProvider>
+        <Stack>
+          {/* Tabs are protected, only for logged-in users */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-        {/* Public screens */}
-        <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
+          {/* Public screens */}
+          <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
 
-        {/* Fallback */}
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
+          {/* Fallback */}
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        <StatusBar style="auto" />
+      </ToastProvider>
     </ThemeProvider>
   );
 }
