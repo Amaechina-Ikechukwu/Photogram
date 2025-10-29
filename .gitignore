@@ -17,10 +17,13 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
-
+.env
+env
+*env
+env*
 # Metro
 .metro-health-check*
-
+package-lock
 # debug
 npm-debug.*
 yarn-debug.*

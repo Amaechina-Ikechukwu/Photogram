@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -49,7 +48,7 @@ export default function RootLayout() {
   // }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <>
       <ToastProvider>
         <Stack>
           {/* Tabs are protected, only for logged-in users */}
@@ -58,12 +57,13 @@ export default function RootLayout() {
           {/* Public screens */}
           <Stack.Screen name="auth/login" options={{ headerShown: false }} />
           <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
+          <Stack.Screen name="upload/index" options={{ headerShown: false }} />
 
           {/* Fallback */}
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />
       </ToastProvider>
-    </ThemeProvider>
+    </>
   );
 }

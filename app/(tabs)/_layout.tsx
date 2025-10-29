@@ -1,15 +1,13 @@
+import { useState } from 'react';
 import { Tabs } from 'expo-router';
-import React, { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable } from 'react-native';
-
-import { HapticTab } from '@/components/HapticTab';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { MaterialIcons } from '@expo/vector-icons';
+import { ActivityIndicator, Pressable } from 'react-native';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { getAuth, signOut } from 'firebase/auth';
 import { app } from '@/firebaseConfig';
 import { useToast } from '@/components/ToastProvider';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import GlassBottomTab from '@/components/GlassBottomTab';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -34,9 +32,9 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      tabBar={(props) => <GlassBottomTab {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: true,
+        headerShown: false,
         headerRight: () => (
           <Pressable onPress={onLogout} style={{ marginRight: 12 }} disabled={loggingOut}>
             {loggingOut ? (
@@ -46,36 +44,33 @@ export default function TabLayout() {
             )}
           </Pressable>
         ),
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
       }}>
- 
       <Tabs.Screen
         name="index"
         options={{
           title: 'Photos',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="photo-library" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialIcons 
+              name="photo-library" 
+              size={focused ? 26 : 24} 
+              color={color} 
+            />
           ),
         }}
       />
       <Tabs.Screen
-        name="upload"
+        name="collections"
         options={{
-          title: 'Upload',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="cloud-upload" size={size} color={color} />
+          title: 'Collections',
+          tabBarIcon: ({ color, focused }) => (
+            <Feather 
+              name="hash" 
+              size={focused ? 26 : 24} 
+              color={color} 
+            />
           ),
         }}
       />
-  
     </Tabs>
   );
 }
