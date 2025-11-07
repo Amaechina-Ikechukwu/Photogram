@@ -1,7 +1,7 @@
 // Import the functions you need
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { //@ts-ignore
-    getReactNativePersistence, initializeAuth } from "firebase/auth";
+    getReactNativePersistence, initializeAuth, getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -16,15 +16,21 @@ const firebaseConfig = {
 };
 
 // Prevent re-initialization in Expo fast refresh
-const app = initializeApp(firebaseConfig);
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Firebase services
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+// Initialize Firebase Auth with persistence
+let auth;
+try {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} catch (error) {
+  // If already initialized, just get the existing instance
+  auth = getAuth(app);
+}
 
 const storage = getStorage(app);
 const db = getFirestore(app);
 
-export { app, db, storage };
+export { app, auth, db, storage };
 

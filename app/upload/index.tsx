@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Pressable, StyleSheet, FlatList, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { auth, storage } from '@/firebaseConfig';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { router } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUpload } from '../../context/UploadContext';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/context/AuthContext';
+import AuthModal from '@/components/AuthModal';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 const imageSize = (width - 32) / 3;
@@ -17,14 +19,31 @@ const imageSize = (width - 32) / 3;
 export default function UploadScreen() {
   const [images, setImages] = useState<MediaLibrary.Asset[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState<number>(0);
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [endCursor, setEndCursor] = useState<string | undefined>();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const colorScheme = useColorScheme();
+  const { uploading, uploads, setImagesToUpload } = useUpload();
+  const router = useRouter();
+  const colors = Colors[colorScheme ?? 'light'];
+  const upload = uploads[0];
+  const authContext = useAuth();
+  const user = authContext?.user;
+
+  // Show auth modal if user is not authenticated
+  useEffect(() => {
+    if (!user && !authContext?.isLoading) {
+      setShowAuthModal(true);
+    }
+  }, [user, authContext?.isLoading]);
 
   useEffect(() => {
-    requestPermissions();
-  }, []);
+    if (user) {
+      requestPermissions();
+    }
+  }, [user]);
 
   const requestPermissions = async () => {
     try {
@@ -47,44 +66,36 @@ export default function UploadScreen() {
     }
   };
 
-  const loadImages = async () => {
-    try {
-      const albums = await MediaLibrary.getAlbumsAsync({ includeSmartAlbums: true });
-      const cameraRoll = albums.find(album => album.title === 'Camera Roll' || album.title === 'Recents');
+  const loadImages = async (after?: string) => {
+    if (loadingMore || !hasNextPage) return;
 
-      let assets;
-      if (cameraRoll) {
-        const result = await MediaLibrary.getAssetsAsync({
-          album: cameraRoll,
-          first: 50,
-          sortBy: [MediaLibrary.SortBy.creationTime],
-          mediaType: [MediaLibrary.MediaType.photo],
-        });
-        assets = result.assets;
-      } else {
-        const result = await MediaLibrary.getAssetsAsync({
-          first: 50,
-          sortBy: [MediaLibrary.SortBy.creationTime],
-          mediaType: [MediaLibrary.MediaType.photo],
-        });
-        assets = result.assets;
-      }
+    try {
+      setLoadingMore(true);
+      let assetsResult;
+      assetsResult = await MediaLibrary.getAssetsAsync({
+        first: 100,
+        after,
+        sortBy: [MediaLibrary.SortBy.creationTime],
+        mediaType: [MediaLibrary.MediaType.photo],
+      });
       
-      setImages(assets);
+      setImages(prev => (after ? [...prev, ...assetsResult.assets] : assetsResult.assets));
+      setHasNextPage(assetsResult.hasNextPage);
+      setEndCursor(assetsResult.endCursor);
     } catch (error) {
       console.error('Error loading images:', error);
       Alert.alert('Error', 'Failed to load images from your photo library');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
   const toggleSelection = (assetId: string) => {
     setSelectedImages(prev => {
-      // If already selected, unselect
       if (prev.includes(assetId)) {
         return prev.filter(item => item !== assetId);
       }
 
-      // Prevent selecting more than 3 images
       if (prev.length >= 3) {
         Alert.alert('Selection limit', 'You can only select up to 3 photos.');
         return prev;
@@ -94,92 +105,10 @@ export default function UploadScreen() {
     });
   };
 
-  const uploadImages = async () => {
-    if (selectedImages.length === 0) return;
-
-    if (!auth?.currentUser?.uid) {
-      Alert.alert('Error', 'You must be logged in to upload photos');
-      return;
-    }
-
-    setUploading(true);
-    setProgress(0);
-
-    try {
-      const uploadPromises = selectedImages.map(async (assetId, index) => {
-        const filename = `photos/${auth.currentUser!.uid}/${Date.now()}-${index}.jpg`;
-        const storageRef = ref(storage, filename);
-
-        // Get the asset info to access the actual file
-        const asset = images.find(img => img.id === assetId);
-        if (!asset) {
-          throw new Error('Asset not found');
-        }
-
-        // Get the asset info with local URI
-        const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id);
-        if (!assetInfo.localUri && !assetInfo.uri) {
-          throw new Error('Could not access asset URI');
-        }
-
-        const uri = assetInfo.localUri || assetInfo.uri;
-        const response = await fetch(uri);
-        const blob = await response.blob();
-
-        const uploadTask = uploadBytesResumable(storageRef, blob);
-
-        return new Promise((resolve, reject) => {
-          uploadTask.on(
-            'state_changed',
-            snapshot => {
-              const prog = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              // Update progress based on the average of all uploads
-              if (index === 0) setProgress(prog);
-            },
-            error => {
-              console.error('Upload failed:', error);
-              reject(error);
-            },
-            async () => {
-              try {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                console.log('Upload successful:', downloadURL);
-                resolve(downloadURL);
-              } catch (error) {
-                console.error('Error getting download URL:', error);
-                reject(error);
-              }
-            }
-          );
-        });
-      });
-
-      await Promise.all(uploadPromises);
-      
-      Alert.alert(
-        'Success!', 
-        `Successfully uploaded ${selectedImages.length} image(s)`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setSelectedImages([]);
-              setProgress(0);
-              router.push(`/(tabs)?refresh=${Date.now()}`);
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Upload error:', error);
-      Alert.alert(
-        'Upload Failed', 
-        'There was an error uploading your photos. Please check your connection and try again.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setUploading(false);
-    }
+  const handleUpload = () => {
+    const selectedAssets = images.filter(img => selectedImages.includes(img.id));
+    setImagesToUpload(selectedAssets);
+    router.push('/upload/confirmation');
   };
 
   const renderItem = ({ item }: { item: MediaLibrary.Asset }) => {
@@ -196,18 +125,31 @@ export default function UploadScreen() {
 
         {isSelected && <ThemedView style={styles.selectionOverlay} />}
 
-        {/* Subtle overlay to indicate disabled/select limit reached */}
         {disabled && <ThemedView style={styles.disabledOverlay} />}
       </Pressable>
     );
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={[{ flex: 1 }, { backgroundColor: colors.background }]}>
       <ThemedView style={styles.container}>
         <ThemedText type="title" style={styles.title}>Select Photos</ThemedText>
 
-        {permissionStatus !== 'granted' ? (
+        {!user ? (
+          <>
+            <ThemedView style={styles.permissionContainer}>
+              <Ionicons name="cloud-upload-outline" size={80} color={colors.icon} />
+              <ThemedText type="subtitle" style={{ marginTop: 16 }}>
+                Upload requires authentication
+              </ThemedText>
+            </ThemedView>
+            <AuthModal 
+              visible={showAuthModal} 
+              onClose={() => setShowAuthModal(false)}
+              message="Sign in to upload and share your photos"
+            />
+          </>
+        ) : permissionStatus !== 'granted' ? (
           <ThemedView style={styles.permissionContainer}>
             <ThemedText style={styles.permissionText}>
               Camera roll permission is required to select photos
@@ -233,6 +175,9 @@ export default function UploadScreen() {
             keyExtractor={item => item.id}
             numColumns={3}
             contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100 }}
+            onEndReached={() => loadImages(endCursor)}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={loadingMore ? <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} /> : null}
           />
         )}
 
@@ -244,12 +189,12 @@ export default function UploadScreen() {
               uploading && styles.buttonDisabled,
               pressed && { opacity: 0.8 },
             ]}
-            onPress={uploadImages}
+            onPress={handleUpload}
             disabled={uploading}
             accessibilityRole="button"
           >
             <ThemedText style={[styles.buttonText, { color: Colors[colorScheme ?? 'light'].background }]}>
-              {uploading ? `Uploading... ${progress.toFixed(0)}%` : `Upload ${selectedImages.length} Image(s)`}
+              {uploading ? `Uploading... ${upload?.progress.toFixed(0)}%` : `Upload ${selectedImages.length} Image(s)`}
             </ThemedText>
           </Pressable>
         )}
@@ -292,7 +237,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
     borderRadius: 8,
-    borderWidth: 3,
+    borderWidth: 1,
     borderColor: '#fff',
   },
   disabledOverlay: {

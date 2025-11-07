@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useColorScheme } from "react-native";
 import { ActivityIndicator, Pressable, StyleSheet, TextInput } from "react-native";
 import { useToast } from "@/components/ToastProvider";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SignupScreen() {
   const [email, setEmail] = useState("");
@@ -15,6 +16,7 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
   const colorScheme = useColorScheme();
   const toast = useToast();
+  const { setUser } = useAuth();
 
   const auth = getAuth(app);
 
@@ -27,9 +29,9 @@ export default function SignupScreen() {
     setLoading(true);
     setError("");
     try {
-      await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const res = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      setUser(res.user);
       toast.show("Account created!", { type: "success" });
-      router.replace("/(tabs)"); // go to tabs after signup
     } catch (err: any) {
       const msg = err?.message ?? "Signup failed";
       setError(msg);

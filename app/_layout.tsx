@@ -1,69 +1,45 @@
-import { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 // Firebase
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { app, auth } from '@/firebaseConfig';
 import { ActivityIndicator } from 'react-native';
 import { ToastProvider } from '@/components/ToastProvider';
+import { AuthProvider } from '../context/AuthContext';
+import { UploadProvider } from '../context/UploadContext';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  const [authChecked, setAuthChecked] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setAuthChecked(true);
-
-      if (firebaseUser) {
-        // Already logged in → go to tabs
-        router.replace('/(tabs)');
-      } else {
-        // Not logged in → go to login
-        router.replace('/auth/login');
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
   if (!loaded) {
-    // Wait until fonts + auth state are loaded
+    // Wait until fonts are loaded
     return <ActivityIndicator/>;
   }
-  // if ( !authChecked) {
-  //   // Wait until fonts + auth state are loaded
-  //   return <ActivityIndicator size={'large'}/>;
-  // }
 
   return (
-    <>
-      <ToastProvider>
-        <Stack>
-          {/* Tabs are protected, only for logged-in users */}
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    <AuthProvider>
+      <UploadProvider>
+        <ToastProvider>
+          <Stack>
+            {/* Tabs are protected, only for logged-in users */}
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-          {/* Public screens */}
-          <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-          <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
-          <Stack.Screen name="upload/index" options={{ headerShown: false }} />
+            {/* Public screens */}
+            <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+            <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
+            <Stack.Screen name="upload/index" options={{ headerShown: false }} />
 
-          {/* Fallback */}
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </ToastProvider>
-    </>
+            <Stack.Screen name="photo/[id]" options={{ headerShown: false }} />
+            {/* Fallback */}
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </ToastProvider>
+      </UploadProvider>
+    </AuthProvider>
   );
 }

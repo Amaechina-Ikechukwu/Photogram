@@ -3,44 +3,90 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Dimensions, FlatList } from 'react-native';
+import { Pressable, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { auth, storage } from '@/firebaseConfig';
-import { getDownloadURL, listAll, ref } from 'firebase/storage';
-import FAB from '@/components/ui/FAB';
+
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
+import { useAuth } from '@/context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import PhotoItem from '@/components/PhotoItem';
 
-const screenWidth = Dimensions.get("window").width;
-const columnWidth = screenWidth / 2.3 - 16;
+interface PhotoData {
+  uid: string;
+  imageUrl: string;
+  category: string | null;
+  tags: string[] | null;
+  createdAt: number;
+  id: string | null;
+}
+
+interface UserData {
+  name: string | null;
+  uid: string;
+  email: string;
+  numberOfUploads: number;
+  totalViews: number;
+  totalLikes: number;
+}
+
+interface PublicPhoto {
+  photo: PhotoData;
+  user: UserData;
+  hasLiked: boolean;
+}
 
 export default function PhotosScreen() {
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<PublicPhoto[]>([]);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const colorScheme = useColorScheme();
+  const authContext = useAuth();
+  const user = authContext?.user;
 
-  const fetchPhotos = async () => {
-    if(auth?.currentUser?.uid){
-       try {
-      const listRef = ref(storage, `photos/${auth?.currentUser?.uid}`);
-      const result = await listAll(listRef);
+  const fetchPhotos = async (pageNum: number = 1) => {
+    if (loading) return;
+    if (pageNum > 1 && !hasMore) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/photos/public?page=${pageNum}&pageSize=10`);
+      const result = await response.json();
       
-      const urls = await Promise.all(result.items.map((item) => getDownloadURL(item)));
+
       
-      setPhotos(urls.reverse());
+      // Check for both 'success' and 'sucess' (typo in API)
+      if ((result.success || result.sucess) && result.data) {
+        if (result.data.length > 0) {
+          if (pageNum === 1) {
+            setPhotos(result.data);
+          } else {
+            setPhotos(prevPhotos => [...prevPhotos, ...result.data]);
+          }
+          setPage(pageNum + 1);
+          
+          // If we got fewer items than pageSize, we've reached the end
+          if (result.data.length < 10) {
+            setHasMore(false);
+          }
+        } else {
+          setHasMore(false);
+        }
+      } else {
+        console.error('API Error:', result);
+      }
     } catch (error) {
       console.error('Error fetching photos:', error);
+    } finally {
+      setLoading(false);
     }
-    }
-   
   };
 
   useEffect(() => {
-    fetchPhotos();
-  }, [auth?.currentUser?.uid]);
-  useEffect(() => {
-    fetchPhotos();
-  }, [ ]);
+    fetchPhotos(1);
+  }, []);
 
   const searchParams = useLocalSearchParams() as { refresh?: string };
   useEffect(() => {
@@ -51,8 +97,151 @@ export default function PhotosScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchPhotos();
+    setPage(1);
+    setHasMore(true);
+    setPhotos([]);
+    await fetchPhotos(1);
     setRefreshing(false);
+  };
+
+  const handleLoadMore = () => {
+    if (!loading && hasMore && photos.length > 0) {
+
+      fetchPhotos(page);
+    }
+  };
+
+  const onScrollHandler = ({ nativeEvent }: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    const paddingToBottom = 100; // Trigger earlier for better UX
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+    
+    if (isCloseToBottom && !loading && hasMore) {
+      handleLoadMore();
+    }
+  };
+
+  const openPhotoDetail = (item: PublicPhoto, index: number) => {
+    router.push({
+      pathname: `/photo/[id]` as any,
+      params: {
+        id: item.photo.id || '',
+        photos: JSON.stringify(photos),
+        index: String(index),
+      },
+    });
+  };
+
+  const renderItem = ({ item, index }: { item: PublicPhoto; index: number }) => {
+  
+    return (
+      <PhotoItem
+        item={item}
+        index={index}
+        onPress={openPhotoDetail}
+  onLike={async (photo: PublicPhoto, newLiked: boolean) => {
+          // Handle like action: optimistic UI update, call API, revert on failure
+          const postId = photo.photo.id;
+          if (!postId) return;
+
+          // Save snapshot to revert if needed
+          const prevPhotos = photos;
+
+          // Optimistically update UI: set hasLiked and adjust author's totalLikes
+          setPhotos((prev) =>
+            prev.map((p) => {
+              if (p.photo.id === postId) {
+                const likesChange = newLiked ? 1 : -1;
+                return {
+                  ...p,
+                  hasLiked: newLiked,
+                  user: { ...p.user, totalLikes: (p.user.totalLikes || 0) + likesChange },
+                };
+              }
+              return p;
+            })
+          );
+
+          try {
+            const token = await user?.getIdToken();
+            const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/like/toggle/${postId}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+            });
+
+            const result = await res.json();
+
+            // If API responds with explicit hasLiked, ensure UI matches server
+            if (result && typeof result.hasLiked === 'boolean') {
+              setPhotos((prev) =>
+                prev.map((p) => (p.photo.id === postId ? { ...p, hasLiked: result.hasLiked } : p))
+              );
+
+              // If server doesn't return updated totalLikes, keep optimistic change.
+            } else if (!(result && (result.success || result.sucess))) {
+              // Unexpected response: revert
+              console.error('Like toggle API unexpected response:', result);
+              setPhotos(prevPhotos);
+            }
+          } catch (err) {
+            console.error('Error toggling like:', err);
+            // Revert optimistic update
+            setPhotos(prevPhotos);
+          }
+        }}
+      />
+    );
+  };
+
+  const renderHeader = () => (
+    <View style={styles.titleContainer}>
+      <ThemedText type="title" style={styles.sectionTitle}>
+        Recents
+      </ThemedText>
+      
+    </View>
+  );
+
+  const renderFooter = () => {
+    if (!loading) return null;
+    return (
+      <View style={styles.loadingMore}>
+        <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].text} />
+        <ThemedText style={{ marginTop: 8 }}>Loading more...</ThemedText>
+      </View>
+    );
+  };
+
+  const renderEmpty = () => {
+    if (loading) {
+      return (
+        <ThemedView style={styles.emptyWrap}>
+          <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].text} />
+          <ThemedText style={{ marginTop: 12 }}>Loading photos...</ThemedText>
+        </ThemedView>
+      );
+    }
+    
+    return (
+      <ThemedView style={styles.emptyWrap}>
+        <ThemedText type="subtitle" style={{ marginBottom: 12 }}>
+          {user ? 'No photos yet 📷' : 'Welcome to Photogram 📷'}
+        </ThemedText>
+        {!user && (
+          <Pressable
+            style={[styles.cta, { backgroundColor: Colors[colorScheme ?? 'light'].tint }]}
+            onPress={() => router.push('/auth/login')}
+          >
+            <ThemedText style={[styles.ctaText, { color: Colors[colorScheme ?? 'light'].background }]}>
+              {'Sign in to view photos'}
+            </ThemedText>
+          </Pressable>
+        )}
+      </ThemedView>
+    );
   };
 
   return (
@@ -62,7 +251,7 @@ export default function PhotosScreen() {
         headerImage={
           photos.length > 0 ? (
             <Image
-              source={{ uri: photos[0] }}
+              source={{ uri: photos[0].photo.imageUrl }}
               style={styles.headerImage}
               contentFit="cover"
             />
@@ -70,53 +259,26 @@ export default function PhotosScreen() {
             <ThemedView style={styles.headerImage} />
           )
         }
+        onScroll={onScrollHandler}
+        scrollEventThrottle={16}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       >
         <ThemedView style={styles.gridContainer}>
-          <ThemedText type="title" style={styles.sectionTitle}>
-            Recent Uploads
-          </ThemedText>
-
-          <FlatList
-            data={photos}
-            keyExtractor={(item, idx) => item || String(idx)}
-            numColumns={2}
-            columnWrapperStyle={styles.row}
-            contentContainerStyle={[
-              styles.listContent,
-              photos.length === 0 && styles.emptyContent,
-              { gap: 10, paddingBottom: 100 },
-            ]}
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            ListEmptyComponent={
-              <ThemedView style={styles.emptyWrap}>
-                <ThemedText type="subtitle" style={{ marginBottom: 12 }}>
-                  No photos yet 📷
-                </ThemedText>
-                <Pressable
-                  style={[styles.cta, { backgroundColor: Colors[colorScheme ?? 'light'].tint }]}
-                  onPress={() => router.push('/(tabs)/upload')}
-                >
-                  <ThemedText style={[styles.ctaText, { color: Colors[colorScheme ?? 'light'].background }]}>
-                    Upload your first photo
-                  </ThemedText>
-                </Pressable>
-              </ThemedView>
-            }
-            renderItem={({ item }) => (
-              <Image
-                source={{ uri: item }}
-                style={[
-                  styles.photo,
-                  { width: columnWidth, height: columnWidth },
-                ]}
-                contentFit="cover"
-              />
-            )}
-          />
+          {renderHeader()}
+          
+          {photos.length === 0 && renderEmpty()}
+          
+          {photos.map((item, index) => (
+            <View key={`${item.photo.id}-${index}`}>
+              {renderItem({ item, index })}
+            </View>
+          ))}
+          
+          {renderFooter()}
         </ThemedView>
       </ParallaxScrollView>
-      <FAB />
+
     </ThemedView>
   );
 }
@@ -149,20 +311,23 @@ const styles = StyleSheet.create({
   ctaText: {
     fontWeight: '600',
   },
-  listContent: {
+  photoListContainer: {
     paddingHorizontal: 8,
-  },
-  row: {
-    justifyContent: 'space-between',
-    marginBottom: 16,
     gap: 10,
   },
-  emptyContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
+  titleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginRight: 8,
   },
-  photo: {
-    borderRadius: 12,
+  reloadButton: {
+    padding: 8,
   },
+  loadingMore: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+ 
 });

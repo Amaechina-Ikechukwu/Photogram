@@ -6,12 +6,14 @@ import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, useColorScheme } from "react-native";
 import { useToast } from "@/components/ToastProvider";
+import { useAuth } from "../../context/AuthContext";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { setUser } = useAuth();
 
   const colorScheme = useColorScheme();
   const toast = useToast();
@@ -27,9 +29,9 @@ export default function LoginScreen() {
     setLoading(true);
     setError("");
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      const res = await signInWithEmailAndPassword(auth, email.trim(), password);
+      setUser(res.user)
       toast.show("Logged in successfully", { type: "success" });
-      router.replace("/(tabs)"); // go to tabs after login
     } catch (err: any) {
       const msg = err?.message ?? "Login failed";
       setError(msg);
