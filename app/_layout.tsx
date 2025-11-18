@@ -25,6 +25,9 @@ export default function RootLayout() {
       <UploadProvider>
         <ToastProvider>
           <Stack>
+            {/* Welcome/Onboarding */}
+            <Stack.Screen name="welcome" options={{ headerShown: false }} />
+
             {/* Tabs are protected, only for logged-in users */}
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 

@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { BlurView } from 'expo-blur';
+import { apiPost } from '@/utils/api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -40,14 +41,12 @@ interface PublicPhoto {
 // Function to increment view count
 const incrementViewCount = async (photoId: string) => {
   try {
-    const url = `${process.env.EXPO_PUBLIC_API_URL}/photos/${photoId}/view`;
-
-    
-    const response = await fetch(url, {
-      method: 'POST',
+    const response = await apiPost(`/photos/${photoId}/view`, {
       headers: {
         'Content-Type': 'application/json',
       },
+      retries: 1,
+      timeout: 15000
     });
     
     if (response.ok) {

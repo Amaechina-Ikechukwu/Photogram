@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { StyleSheet, FlatList, Dimensions, Pressable, ActivityIndicator, View, StatusBar, Switch } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -7,21 +7,29 @@ import { Colors } from '@/constants/Colors';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUpload } from '../../context/UploadContext';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
-const IMAGE_SIZE = width * 0.75;
+const IMAGE_SIZE = width * 0.9;
 const SPACING = 16;
 
 export default function UploadConfirmationScreen() {
   const colorScheme = useColorScheme();
   const { imagesToUpload, startUpload, uploading } = useUpload();
   const router = useRouter();
+  const navigation = useNavigation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPublic, setIsPublic] = useState(true);
   const isDark = colorScheme === 'dark';
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: 'Confirm Upload',
+      headerBackTitle: 'Back',
+    });
+  }, [navigation]);
 
   const renderItem = ({ item }: { item: any }) => {
     return (

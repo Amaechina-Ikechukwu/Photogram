@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(41, 41, 41, 0.3)',
   },
   content: {
     position: 'relative',

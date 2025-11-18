@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { apiGet } from '@/utils/api';
 
 const { width } = Dimensions.get('window');
 const photoSize = 150;
@@ -60,11 +61,12 @@ export default function CollectionsScreen() {
     const fetchCategories = async (pageNum: number = 1) => {
       try {
         const token = await user?.getIdToken();
-        const url = `${process.env.EXPO_PUBLIC_API_URL}/photos/categories?page=${pageNum}&pageSize=${pageSize}`;
-        const response = await fetch(url, {
+        const response = await apiGet(`/photos/categories?page=${pageNum}&pageSize=${pageSize}`, {
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
+          retries: 1,
+          timeout: 30000
         });
         const result = await response.json();
 

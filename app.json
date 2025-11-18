@@ -4,7 +4,7 @@
     "slug": "photogram",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/ios-light.png",
     "scheme": "photogram",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

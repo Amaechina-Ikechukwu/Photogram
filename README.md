@@ -8,7 +8,9 @@ Photogram is a modern image-sharing app built with Expo React Native and Firebas
 
 🔒 Privacy First – EXIF metadata (location, camera details, etc.) is removed from all uploads.
 
-🔥 Firebase Integration – Secure authentication, storage, and real-time database.
+� Google Authentication – Secure sign-in using Google OAuth for a seamless experience.
+
+�🔥 Firebase Integration – Secure authentication, storage, and real-time database.
 
 🌙 Dark & Light Mode – Seamless theme switching for user preference.
 
@@ -19,6 +21,8 @@ Photogram is a modern image-sharing app built with Expo React Native and Firebas
 Frontend: Expo React Native
 
 Backend & Storage: Firebase (Auth, Firestore, Storage, Cloud Functions)
+
+Authentication: Google OAuth 2.0
 
 Image Processing: Python Cloud Functions (Pillow) for EXIF data removal
 
@@ -37,11 +41,12 @@ npm install
 yarn install
 
 
-Configure Firebase
+Configure Firebase & Google Auth
 
-Add your Firebase project credentials in firebaseConfig.js (or .env).
-
-Enable Authentication, Firestore, and Storage in Firebase Console.
+1. Add your Firebase project credentials in `.env` (copy from `.env.example`)
+2. Set up Google OAuth credentials (see `GOOGLE_AUTH_SETUP.md` for detailed instructions)
+3. Enable Google Authentication in Firebase Console
+4. Enable Firestore and Storage in Firebase Console
 
 Run locally
 
@@ -57,11 +62,22 @@ Deploy the EXIF-stripping function:
 firebase deploy --only functions
 
 
+🔑 Authentication Setup
+
+This app uses **Google Authentication only**. For detailed setup instructions, please refer to [GOOGLE_AUTH_SETUP.md](./GOOGLE_AUTH_SETUP.md).
+
+Quick setup:
+1. Create OAuth 2.0 credentials in Google Cloud Console
+2. Copy `.env.example` to `.env` and fill in your credentials
+3. Enable Google sign-in in Firebase Console
+
 🚧 Roadmap
 
 ✅ Basic image uploads
 
 ✅ EXIF stripping for privacy
+
+✅ Google OAuth authentication
 
 ⏳ User profiles & followers
 

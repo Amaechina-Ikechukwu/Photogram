@@ -1,14 +1,15 @@
 
 import { router, useSegments } from "expo-router";
 import React from "react";
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth } from '@/firebaseConfig';
 
 
 const AuthContext = React.createContext<{
     user: User | null,
     setUser: React.Dispatch<React.SetStateAction<User | null>>,
-    isLoading: boolean
+    isLoading: boolean,
+    signOut: () => Promise<void>
 } | null>(null);
 
 // This hook can be used to access the user info.
@@ -66,6 +67,16 @@ export function AuthProvider(props: React.PropsWithChildren) {
         }
     }, [user]);
 
+    const signOut = async () => {
+        try {
+            await firebaseSignOut(auth);
+            setUser(null);
+        } catch (error) {
+            console.error('Error signing out:', error);
+            throw error;
+        }
+    };
+
     useProtectedRoute(user, isLoading);
 
     return (
@@ -74,6 +85,7 @@ export function AuthProvider(props: React.PropsWithChildren) {
                 setUser,
                 user,
                 isLoading,
+                signOut,
             }}
         >
             {props.children}

@@ -11,6 +11,7 @@ import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import PhotoItem from '@/components/PhotoItem';
+import { apiGet, apiPost } from '@/utils/api';
 
 interface PhotoData {
   uid: string;
@@ -52,7 +53,10 @@ export default function PhotosScreen() {
     
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/photos/public?page=${pageNum}&pageSize=10`);
+      const response = await apiGet(`/photos/public?page=${pageNum}&pageSize=10`, {
+        retries: 1,
+        timeout: 30000
+      });
       const result = await response.json();
       
 
@@ -164,12 +168,13 @@ export default function PhotosScreen() {
 
           try {
             const token = await user?.getIdToken();
-            const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/like/toggle/${postId}`, {
-              method: 'POST',
+            const res = await apiPost(`/like/toggle/${postId}`, {
               headers: {
                 'Content-Type': 'application/json',
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
               },
+              retries: 1,
+              timeout: 15000
             });
 
             const result = await res.json();

@@ -106,11 +106,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 60,
     borderRadius: 30,
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     overflow: 'hidden',
     borderWidth: 1,
+    gap: 20,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -127,6 +128,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap:10
   },
   iconContainer: {
     width: 50,
@@ -134,6 +136,5 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
-    transition: 'all 0.2s',
   },
 });

@@ -2,7 +2,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Image, StyleSheet, View, ScrollView, TextInput, TouchableOpacity, useColorScheme, Animated, Keyboard, KeyboardAvoidingView, Platform, Modal, FlatList } from "react-native";
+import { ActivityIndicator, Image, StyleSheet, View, ScrollView, TextInput, TouchableOpacity, useColorScheme, Animated, Keyboard, KeyboardAvoidingView, Platform, Modal, FlatList, RefreshControl } from "react-native";
 import ImageViewing from "react-native-image-viewing";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
@@ -10,7 +10,9 @@ import GlassBackground from "@/components/ui/GlassBackground";
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from "@/constants/Colors";
 import UploadProgressBar from "@/components/UploadProgressBar";
-import AuthModal from "@/components/AuthModal";
+import SignInPromptModal from "@/components/SignInPromptModal";
+import { apiGet } from '@/utils/api';
+import { router, useFocusEffect } from 'expo-router';
 
 type UserProfile = {
     name: string | null;
@@ -47,6 +49,7 @@ export default function ProfileScreen() {
     const [page, setPage] = useState(1);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const authContext = useAuth();
     const user = authContext?.user;
     const colorScheme = useColorScheme();
@@ -57,18 +60,33 @@ export default function ProfileScreen() {
             setShowAuthModal(true);
         } else if (user) {
             fetchProfile();
-            fetchPhotos(1);
         }
     }, [user, authContext?.isLoading]);
+
+    // Refetch photos when screen comes into focus and show auth modal if not signed in
+    useFocusEffect(
+        useCallback(() => {
+            if (user) {
+                setHasMore(true);
+                setPage(1);
+                fetchPhotos(1);
+            } else if (!authContext?.isLoading) {
+                // Show auth modal when user navigates to profile while not signed in
+                setShowAuthModal(true);
+            }
+        }, [user, authContext?.isLoading])
+    );
 
     const fetchProfile = async () => {
         if (user) {
             try {
                 const token = await user.getIdToken();
-                const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/users/me`, {
+                const response = await apiGet(`/users/me`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
+                    retries: 1,
+                    timeout: 30000
                 });
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const result = await response.json();
@@ -88,10 +106,12 @@ export default function ProfileScreen() {
 
             try {
                 const token = await user.getIdToken();
-                const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/users/photos?page=${pageNum}&pageSize=10`, {
+                const response = await apiGet(`/users/photos?page=${pageNum}&pageSize=10`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
+                    retries: 1,
+                    timeout: 30000
                 });
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const result = await response.json();
@@ -121,6 +141,14 @@ export default function ProfileScreen() {
             fetchPhotos(page);
         }
     };
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        setHasMore(true);
+        setPage(1);
+        await Promise.all([fetchProfile(), fetchPhotos(1)]);
+        setRefreshing(false);
+    }, [user]);
 
     // Keyboard event listeners
     useEffect(() => {
@@ -259,14 +287,6 @@ export default function ProfileScreen() {
         }).start(() => setIsModalVisible(false));
     };
 
-    if (loading) {
-        return (
-            <ThemedView style={styles.centered}>
-                <ActivityIndicator size="large" />
-            </ThemedView>
-        );
-    }
-
     if (!user) {
         return (
             <>
@@ -276,12 +296,21 @@ export default function ProfileScreen() {
                         Profile requires authentication
                     </ThemedText>
                 </ThemedView>
-                <AuthModal 
+                <SignInPromptModal 
                     visible={showAuthModal} 
                     onClose={() => setShowAuthModal(false)}
-                    message="Sign in to view your profile and manage your photos"
+                    title="Sign In to View Profile"
+                    message="Sign in to view your profile, manage your photos, and connect with the community"
                 />
             </>
+        );
+    }
+
+    if (loading) {
+        return (
+            <ThemedView style={styles.centered}>
+                <ActivityIndicator size="large" />
+            </ThemedView>
         );
     }
 
@@ -301,6 +330,12 @@ export default function ProfileScreen() {
             <ThemedView style={styles.container}>
                 <UploadProgressBar />
                 <View style={styles.profileHeader}>
+                    <TouchableOpacity 
+                        style={styles.settingsButton}
+                        onPress={() => router.push('/settings')}
+                    >
+                        <Ionicons name="settings-outline" size={24} color={colors.text} />
+                    </TouchableOpacity>
                     <Image
                         source={{ uri: `https://ui-avatars.com/api/?name=${profile.name ?? profile.email}` }}
                         style={styles.profileImage}
@@ -337,6 +372,14 @@ export default function ProfileScreen() {
                     numColumns={3}
                     key={'flatlist-3-columns'}
                     columnWrapperStyle={styles.columnWrapper}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor={colors.text}
+                            colors={[colors.text]}
+                        />
+                    }
                     renderItem={({ item, index }) => {
                      
                         return (
@@ -476,6 +519,19 @@ const styles = StyleSheet.create({
     profileHeader: {
         alignItems: 'center',
         marginBottom: 30,
+        position: 'relative',
+    },
+    settingsButton: {
+        position: 'absolute',
+        top: 0,
+        right: 20,
+        zIndex: 10,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(128, 128, 128, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     profileImage: {
         width: 100,
