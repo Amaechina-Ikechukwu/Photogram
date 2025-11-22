@@ -69,6 +69,10 @@ export default function UploadWelcomeModal({
                 source={require('@/assets/splash-images/madeline-liu-LgSZnc4T0_o-unsplash.jpg')}
                 style={styles.heroImage}
                 contentFit="cover"
+                cachePolicy="memory-disk"
+                recyclingKey="upload-welcome-hero"
+                allowDownscaling={true}
+                priority="high"
               />
               <View style={styles.imageOverlay}>
                 <MaterialIcons 

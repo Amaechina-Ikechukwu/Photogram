@@ -167,13 +167,40 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
       return (
         <>
           <View style={[styles.imageContainer, styles.tallLeft]}>
-            <Image source={images[0]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[0]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-0`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
           <View style={[styles.imageContainer, styles.topRight]}>
-            <Image source={images[1]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[1]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-1`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
           <View style={[styles.imageContainer, styles.bottomRight]}>
-            <Image source={images[2]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[2]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-2`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
         </>
       );
@@ -182,16 +209,52 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
       return (
         <>
           <View style={[styles.imageContainer, styles.topLeft]}>
-            <Image source={images[0]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[0]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-0`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
           <View style={[styles.imageContainer, styles.middleLeft]}>
-            <Image source={images[1]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[1]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-1`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
           <View style={[styles.imageContainer, styles.topRight]}>
-            <Image source={images[2]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[2]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-2`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
           <View style={[styles.imageContainer, styles.bottomRight]}>
-            <Image source={images[3]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[3]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-3`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
         </>
       );
@@ -200,19 +263,64 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
       return (
         <>
           <View style={[styles.imageContainer, styles.tallLeft]}>
-            <Image source={images[0]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[0]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-0`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
           <View style={[styles.imageContainer, styles.topRight]}>
-            <Image source={images[1]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[1]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-1`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
           <View style={[styles.imageContainer, styles.bottomRight]}>
-            <Image source={images[2]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[2]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-2`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
           <View style={[styles.imageContainer, styles.centerRight]}>
-            <Image source={images[3]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[3]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-3`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
           <View style={[styles.imageContainer, styles.bottomLeft]}>
-            <Image source={images[4]} style={styles.image} contentFit="cover" transition={300} />
+            <Image 
+              source={images[4]} 
+              style={styles.image} 
+              contentFit="cover" 
+              transition={300}
+              cachePolicy="memory-disk"
+              recyclingKey={`welcome-4`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
         </>
       );

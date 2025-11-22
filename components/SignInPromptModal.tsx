@@ -121,10 +121,14 @@ export default function SignInPromptModal({
                                             style={styles.image} 
                                             contentFit="cover" 
                                             transition={300}
+                                            cachePolicy="memory-disk"
+                                            recyclingKey={`signin-modal-${index}`}
+                                            allowDownscaling={true}
+                                            priority="normal"
                                         />
                                     </View>
                                 ))}
-                                {/* Gradient Overlay on Images */}
+                                {/* Gradient Overlay on Images */
                                 <LinearGradient
                                     colors={
                                         isDark

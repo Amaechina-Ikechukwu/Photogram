@@ -70,6 +70,9 @@ export default function PhotoItem({ item, index, onPress, onLike }: PhotoItemPro
         }}
         transition={300}
         cachePolicy="memory-disk"
+        recyclingKey={item.photo.imageUrl}
+        allowDownscaling={true}
+        autoplay={false}
       />
       
       {/* Author name with glass background */}

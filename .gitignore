@@ -28,7 +28,7 @@ package-lock
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-
+android
 # macOS
 .DS_Store
 *.pem
@@ -40,3 +40,5 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+.env.local

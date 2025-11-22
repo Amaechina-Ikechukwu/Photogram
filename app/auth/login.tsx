@@ -65,7 +65,15 @@ export default function LoginScreen() {
       <View style={styles.imageGrid}>
         {splashImages.map((image, index) => (
           <View key={index} style={styles.imageContainer}>
-            <Image source={image} style={styles.image} contentFit="cover" />
+            <Image 
+              source={image} 
+              style={styles.image} 
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              recyclingKey={`login-bg-${index}`}
+              allowDownscaling={true}
+              priority="normal"
+            />
           </View>
         ))}
       </View>

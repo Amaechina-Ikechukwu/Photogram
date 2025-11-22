@@ -39,6 +39,10 @@ export default function UploadConfirmationScreen() {
             source={{ uri: item.uri }} 
             style={styles.image}
             contentFit="cover"
+            cachePolicy="memory-disk"
+            recyclingKey={item.id}
+            allowDownscaling={true}
+            priority="high"
           />
         </View>
       </View>

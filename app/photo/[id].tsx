@@ -162,6 +162,10 @@ function PhotoPage({ photo, user }: PublicPhoto) {
                   style={styles.image}
                   contentFit="contain"
                   sharedTransitionTag={`photo-${photo.imageUrl}`}
+                  cachePolicy="memory-disk"
+                  recyclingKey={photo.imageUrl as string}
+                  allowDownscaling={true}
+                  priority="high"
                 />
               </Pressable>
             </Animated.View>

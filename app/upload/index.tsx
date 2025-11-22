@@ -121,7 +121,15 @@ export default function UploadScreen() {
         style={styles.imageContainer}
         disabled={disabled}
       >
-        <Image source={{ uri: item.uri }} style={styles.image} />
+        <Image 
+          source={{ uri: item.uri }} 
+          style={styles.image}
+          contentFit="cover"
+          cachePolicy="memory"
+          recyclingKey={item.id}
+          allowDownscaling={true}
+          priority="normal"
+        />
 
         {isSelected && <ThemedView style={styles.selectionOverlay} />}
 
