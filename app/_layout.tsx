@@ -1,6 +1,8 @@
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 
@@ -10,6 +12,9 @@ import { ToastProvider } from '@/components/ToastProvider';
 import { AuthProvider } from '../context/AuthContext';
 import { UploadProvider } from '../context/UploadContext';
 import * as Sentry from '@sentry/react-native';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 Sentry.init({
   dsn: 'https://8eb63f46e6e841b788e1da7803b99b09@o4507437373980672.ingest.de.sentry.io/4510407908982864',
@@ -35,9 +40,16 @@ export default Sentry.wrap(function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
+  useEffect(() => {
+    if (loaded) {
+      // Hide the splash screen after fonts are loaded
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
   if (!loaded) {
     // Wait until fonts are loaded
-    return <ActivityIndicator/>;
+    return null;
   }
 
   return (
