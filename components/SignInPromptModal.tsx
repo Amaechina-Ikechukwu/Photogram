@@ -128,7 +128,6 @@ export default function SignInPromptModal({
                                         />
                                     </View>
                                 ))}
-                                {/* Gradient Overlay on Images */
                                 <LinearGradient
                                     colors={
                                         isDark
