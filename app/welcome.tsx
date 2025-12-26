@@ -93,59 +93,109 @@ export default function WelcomeScreen() {
             {...page}
             isActive={currentPage === index}
             isDark={isDark}
+            pageIndex={index}
           />
         ))}
       </ScrollView>
 
       {/* Skip Button */}
       <Pressable style={styles.skipButton} onPress={skipToLogin}>
-        <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={styles.skipBlur}>
-          <Text style={[styles.skipText, { color: isDark ? '#fff' : '#000' }]}>
-            Skip
-          </Text>
-        </BlurView>
+        {Platform.OS === 'ios' ? (
+          <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={styles.skipBlur}>
+            <Text style={[styles.skipText, { color: isDark ? '#fff' : '#000' }]}>
+              Skip
+            </Text>
+          </BlurView>
+        ) : (
+          <View style={[styles.skipBlur, { backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+            <Text style={[styles.skipText, { color: isDark ? '#fff' : '#000' }]}>
+              Skip
+            </Text>
+          </View>
+        )}
       </Pressable>
 
       {/* Bottom Controls */}
       <View style={styles.bottomContainer}>
-        <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={styles.bottomBlur}>
-          {/* Pagination Dots */}
-          <View style={styles.paginationContainer}>
-            {onboardingData.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.paginationDot,
-                  currentPage === index && styles.paginationDotActive,
-                ]}
-              />
-            ))}
-          </View>
+        {Platform.OS === 'ios' ? (
+          <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={styles.bottomBlur}>
+            {/* Pagination Dots */}
+            <View style={styles.paginationContainer}>
+              {onboardingData.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.paginationDot,
+                    currentPage === index && styles.paginationDotActive,
+                  ]}
+                />
+              ))}
+            </View>
 
-          {/* Continue Button */}
-          <Pressable
-            style={[
-              styles.continueButton,
-              currentPage === onboardingData.length - 1 && styles.finalButton,
-            ]}
-            onPress={goToNextPage}
-          >
-            <LinearGradient
-              colors={
-                currentPage === onboardingData.length - 1
-                  ? ['#FFD700', '#FFA500']
-                  : ['#667eea', '#764ba2']
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.continueGradient}
+            {/* Continue Button */}
+            <Pressable
+              style={[
+                styles.continueButton,
+                currentPage === onboardingData.length - 1 && styles.finalButton,
+              ]}
+              onPress={goToNextPage}
             >
-              <Text style={styles.continueText}>
-                {currentPage === onboardingData.length - 1 ? 'Get Started' : 'Continue'}
-              </Text>
-            </LinearGradient>
-          </Pressable>
-        </BlurView>
+              <LinearGradient
+                colors={
+                  currentPage === onboardingData.length - 1
+                    ? ['#FFD700', '#FFA500']
+                    : ['#667eea', '#764ba2']
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.continueGradient}
+              >
+                <Text style={styles.continueText}>
+                  {currentPage === onboardingData.length - 1 ? 'Get Started' : 'Continue'}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </BlurView>
+        ) : (
+          <View style={[styles.bottomBlur, { backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.85)' }]}>
+            {/* Pagination Dots */}
+            <View style={styles.paginationContainer}>
+              {onboardingData.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.paginationDot,
+                    currentPage === index && styles.paginationDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Continue Button */}
+            <Pressable
+              style={[
+                styles.continueButton,
+                currentPage === onboardingData.length - 1 && styles.finalButton,
+              ]}
+              onPress={goToNextPage}
+            >
+              <LinearGradient
+                colors={
+                  currentPage === onboardingData.length - 1
+                    ? ['#FFD700', '#FFA500']
+                    : ['#667eea', '#764ba2']
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.continueGradient}
+              >
+                <Text style={styles.continueText}>
+                  {currentPage === onboardingData.length - 1 ? 'Get Started' : 'Continue'}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -157,9 +207,30 @@ interface OnboardingPageProps {
   images: any[];
   isActive: boolean;
   isDark: boolean;
+  pageIndex: number;
 }
 
-function OnboardingPage({ title, subtitle, images, isActive, isDark }: OnboardingPageProps) {
+function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }: OnboardingPageProps) {
+  // Only render images for the active page to reduce memory usage
+  if (!isActive) {
+    return (
+      <View style={styles.page}>
+        <LinearGradient
+          colors={
+            isDark
+              ? ['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)', 'rgba(0,0,0,0.95)']
+              : ['rgba(255,255,255,0.7)', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0.95)']
+          }
+          style={[styles.overlay, { height: SCREEN_HEIGHT }]}
+        />
+        <View style={styles.content}>
+          <Text style={[styles.title, { color: isDark ? '#fff' : '#000' }]}>{title}</Text>
+          <Text style={[styles.subtitle, { color: isDark ? '#ccc' : '#666' }]}>{subtitle}</Text>
+        </View>
+      </View>
+    );
+  }
+
   // Create a masonry-like layout with the images
   const renderMasonryLayout = () => {
     if (images.length === 3) {
@@ -172,10 +243,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-0`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img0`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
           <View style={[styles.imageContainer, styles.topRight]}>
@@ -184,10 +257,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-1`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img1`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
           <View style={[styles.imageContainer, styles.bottomRight]}>
@@ -196,10 +271,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-2`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img2`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
         </>
@@ -214,10 +291,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-0`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img0`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
           <View style={[styles.imageContainer, styles.middleLeft]}>
@@ -226,10 +305,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-1`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img1`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
           <View style={[styles.imageContainer, styles.topRight]}>
@@ -238,10 +319,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-2`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img2`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
           <View style={[styles.imageContainer, styles.bottomRight]}>
@@ -250,10 +333,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-3`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img3`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
         </>
@@ -268,10 +353,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-0`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img0`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
           <View style={[styles.imageContainer, styles.topRight]}>
@@ -280,10 +367,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-1`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img1`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
           <View style={[styles.imageContainer, styles.bottomRight]}>
@@ -292,10 +381,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-2`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img2`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
           <View style={[styles.imageContainer, styles.centerRight]}>
@@ -304,10 +395,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-3`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img3`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
           <View style={[styles.imageContainer, styles.bottomLeft]}>
@@ -316,10 +409,12 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark }: Onboardin
               style={styles.image} 
               contentFit="cover" 
               transition={300}
-              cachePolicy="memory-disk"
-              recyclingKey={`welcome-4`}
+              cachePolicy="memory"
+              recyclingKey={`page${pageIndex}-img4`}
               allowDownscaling={true}
-              priority="normal"
+              priority="high"
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              responsivePolicy="live"
             />
           </View>
         </>

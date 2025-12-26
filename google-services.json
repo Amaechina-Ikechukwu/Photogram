@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "286455810620",
+    "firebase_url": "https://musterus-api-default-rtdb.firebaseio.com",
+    "project_id": "musterus-api",
+    "storage_bucket": "musterus-api.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:286455810620:android:718d88c045f2cd26bdd139",
+        "android_client_info": {
+          "package_name": "com.ikaychina.photogram"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "286455810620-pr86tung61ln28hh3t7v5t0kas4h8u8s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATY62KrbmdNqFZZsjWZjGkhoKUFshGqEg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "286455810620-itainob5pb3peim3ljhvqpeipa0l4484.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "286455810620-80r77k91v9g6h2ci3scjddeoeac91i0h.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ikaychina.photogram"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

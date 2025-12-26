@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, StyleSheet, TouchableOpacity, View, Dimensions, Animated } from 'react-native';
+import { Modal, StyleSheet, TouchableOpacity, View, Dimensions, Animated, Platform } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
@@ -82,7 +82,11 @@ export default function SignInPromptModal({
                 activeOpacity={1} 
                 onPress={onClose}
             >
-                <BlurView intensity={30} style={StyleSheet.absoluteFill} tint={isDark ? 'dark' : 'light'} />
+                {Platform.OS === 'ios' ? (
+                    <BlurView intensity={30} style={StyleSheet.absoluteFill} tint={isDark ? 'dark' : 'light'} />
+                ) : (
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]} />
+                )}
                 
                 <Animated.View 
                     style={[
@@ -100,9 +104,15 @@ export default function SignInPromptModal({
                         }]}>
                             {/* Close Button */}
                             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                                <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={styles.closeBlur}>
-                                    <Ionicons name="close" size={20} color={colors.text} />
-                                </BlurView>
+                                {Platform.OS === 'ios' ? (
+                                    <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={styles.closeBlur}>
+                                        <Ionicons name="close" size={20} color={colors.text} />
+                                    </BlurView>
+                                ) : (
+                                    <View style={[styles.closeBlur, { backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+                                        <Ionicons name="close" size={20} color={colors.text} />
+                                    </View>
+                                )}
                             </TouchableOpacity>
 
                             {/* Image Grid */}
@@ -121,10 +131,12 @@ export default function SignInPromptModal({
                                             style={styles.image} 
                                             contentFit="cover" 
                                             transition={300}
-                                            cachePolicy="memory-disk"
+                                            cachePolicy="memory"
                                             recyclingKey={`signin-modal-${index}`}
                                             allowDownscaling={true}
-                                            priority="normal"
+                                            priority="high"
+                                            placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                                            responsivePolicy="live"
                                         />
                                     </View>
                                 ))}

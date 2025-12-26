@@ -6,6 +6,7 @@ import {
   Pressable,
   Dimensions,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { ThemedText } from './ThemedText';
@@ -39,14 +40,15 @@ export default function UploadWelcomeModal({
       visible={visible}
       onRequestClose={onClose}
     >
-      <BlurView
-        intensity={isDark ? 40 : 60}
-        tint={colorScheme ?? 'light'}
-        style={styles.blurContainer}
-      >
-        <Pressable style={styles.overlay} onPress={onClose} />
+      {Platform.OS === 'ios' ? (
+        <BlurView
+          intensity={isDark ? 40 : 60}
+          tint={colorScheme ?? 'light'}
+          style={styles.blurContainer}
+        >
+          <Pressable style={styles.overlay} onPress={onClose} />
         
-        <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
+          <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
           <Pressable 
             style={styles.closeButton} 
             onPress={onClose}
@@ -69,10 +71,12 @@ export default function UploadWelcomeModal({
                 source={require('@/assets/splash-images/madeline-liu-LgSZnc4T0_o-unsplash.jpg')}
                 style={styles.heroImage}
                 contentFit="cover"
-                cachePolicy="memory-disk"
+                cachePolicy="memory"
                 recyclingKey="upload-welcome-hero"
                 allowDownscaling={true}
                 priority="high"
+                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                responsivePolicy="live"
               />
               <View style={styles.imageOverlay}>
                 <MaterialIcons 
@@ -174,7 +178,119 @@ export default function UploadWelcomeModal({
             </View>
           </ScrollView>
         </ThemedView>
-      </BlurView>
+        </BlurView>
+      ) : (
+        <View style={[styles.blurContainer, { backgroundColor: 'rgba(0, 0, 0, 0.7)' }]}>
+          <Pressable style={styles.overlay} onPress={onClose} />
+        
+          <ThemedView style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Pressable 
+              style={styles.closeButton} 
+              onPress={onClose}
+              hitSlop={8}
+            >
+              <MaterialIcons 
+                name="close" 
+                size={28} 
+                color={colors.text} 
+              />
+            </Pressable>
+
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+            >
+              {/* Hero Image */}
+              <View style={styles.imageContainer}>
+                <Image
+                  source={require('@/assets/splash-images/madeline-liu-LgSZnc4T0_o-unsplash.jpg')}
+                  style={styles.heroImage}
+                  contentFit="cover"
+                  cachePolicy="memory"
+                  recyclingKey="upload-welcome-hero-android"
+                  allowDownscaling={true}
+                  priority="high"
+                  placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                  responsivePolicy="live"
+                />
+                <View style={styles.imageOverlay}>
+                  <MaterialIcons 
+                    name="cloud-upload" 
+                    size={64} 
+                    color="white" 
+                  />
+                </View>
+              </View>
+
+              {/* Title */}
+              <ThemedText type="title" style={styles.title}>
+                Welcome to Upload
+              </ThemedText>
+
+              {/* Description */}
+              <ThemedText style={styles.description}>
+                Share your beautiful moments with the Photogram community!
+              </ThemedText>
+
+              {/* Features List */}
+              <View style={styles.featuresContainer}>
+                <FeatureItem
+                  icon="public"
+                  title="Public by Default"
+                  description="Your photos will be visible to everyone"
+                  colors={colors}
+                />
+                
+                <FeatureItem
+                  icon="favorite"
+                  title="Community Love"
+                  description="Get likes, comments, and connections"
+                  colors={colors}
+                />
+                
+                <FeatureItem
+                  icon="image"
+                  title="Share Your Best"
+                  description="Upload high-quality photos to showcase your work"
+                  colors={colors}
+                />
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.buttonContainer}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.button,
+                    styles.primaryButton,
+                    { opacity: pressed ? 0.8 : 1 }
+                  ]}
+                  onPress={onContinue}
+                >
+                  <ThemedText style={[styles.buttonText, styles.primaryButtonText]}>
+                    Got it, Let's Upload!
+                  </ThemedText>
+                </Pressable>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.button,
+                    styles.secondaryButton,
+                    { 
+                      borderColor: colors.text,
+                      opacity: pressed ? 0.6 : 1 
+                    }
+                  ]}
+                  onPress={onClose}
+                >
+                  <ThemedText style={styles.buttonText}>
+                    Maybe Later
+                  </ThemedText>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </ThemedView>
+        </View>
+      )}
     </Modal>
   );
 }

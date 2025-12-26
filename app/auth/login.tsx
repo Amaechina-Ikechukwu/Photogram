@@ -8,12 +8,14 @@ import { ActivityIndicator, Pressable, StyleSheet, Platform, View, useColorSchem
 import { useToast } from "@/components/ToastProvider";
 import { useAuth } from "../../context/AuthContext";
 import { LinearGradient } from 'expo-linear-gradient';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 
-WebBrowser.maybeCompleteAuthSession();
+// Configure Google Sign-In
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+});
 
 // Import splash images
 const splashImages = [
@@ -29,23 +31,13 @@ export default function LoginScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      handleGoogleSignIn(id_token);
-    }
-  }, [response]);
-
-  const handleGoogleSignIn = async (idToken: string) => {
+  const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const { idToken } = userInfo.data!;
+      
       const credential = GoogleAuthProvider.credential(idToken);
       const result = await signInWithCredential(auth, credential);
       authContext?.setUser(result.user);
@@ -54,6 +46,7 @@ export default function LoginScreen() {
     } catch (err: any) {
       const msg = err?.message ?? "Google Sign-In failed";
       toast.show(msg, { type: "error" });
+      console.error('Google Sign-In Error:', err);
     } finally {
       setLoading(false);
     }
@@ -112,8 +105,8 @@ export default function LoginScreen() {
         {/* Google Sign-In Button */}
         <Pressable 
           style={styles.googleButton} 
-          onPress={() => promptAsync()}
-          disabled={!request || loading}
+          onPress={handleGoogleSignIn}
+          disabled={loading}
         >
           <LinearGradient
             colors={['#4285F4', '#34A853', '#FBBC05', '#EA4335']}
