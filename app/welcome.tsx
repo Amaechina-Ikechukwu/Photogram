@@ -14,19 +14,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SPLASH_IMAGES_ARRAY } from '@/constants/ImageUrls';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Import splash images
-const splashImages = [
-  require('../assets/splash-images/y-s-zpWdIbZ_jwM-unsplash.jpg'),
-  require('../assets/splash-images/laura-cleffmann-gRT7o73xua0-unsplash.jpg'),
-  require('../assets/splash-images/spenser-sembrat-s7W2PXuYGcc-unsplash.jpg'),
-  require('../assets/splash-images/madeline-liu-LgSZnc4T0_o-unsplash.jpg'),
-  require('../assets/splash-images/nik-Us-QFSJjkas-unsplash.jpg'),
-  require('../assets/splash-images/iryna-studenets-E6GngziykS0-unsplash.jpg'),
-  require('../assets/splash-images/kellen-riggin-OVLu_Bp43wQ-unsplash.jpg'),
-];
+// Use remote image URLs for better performance
+const splashImages = SPLASH_IMAGES_ARRAY;
 
 const onboardingData = [
   {
@@ -239,7 +232,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
         <>
           <View style={[styles.imageContainer, styles.tallLeft]}>
             <Image 
-              source={images[0]} 
+              source={{ uri: images[0] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -253,7 +246,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
           </View>
           <View style={[styles.imageContainer, styles.topRight]}>
             <Image 
-              source={images[1]} 
+              source={{ uri: images[1] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -267,7 +260,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
           </View>
           <View style={[styles.imageContainer, styles.bottomRight]}>
             <Image 
-              source={images[2]} 
+              source={{ uri: images[2] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -287,7 +280,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
         <>
           <View style={[styles.imageContainer, styles.topLeft]}>
             <Image 
-              source={images[0]} 
+              source={{ uri: images[0] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -301,7 +294,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
           </View>
           <View style={[styles.imageContainer, styles.middleLeft]}>
             <Image 
-              source={images[1]} 
+              source={{ uri: images[1] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -315,7 +308,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
           </View>
           <View style={[styles.imageContainer, styles.topRight]}>
             <Image 
-              source={images[2]} 
+              source={{ uri: images[2] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -329,7 +322,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
           </View>
           <View style={[styles.imageContainer, styles.bottomRight]}>
             <Image 
-              source={images[3]} 
+              source={{ uri: images[3] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -349,7 +342,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
         <>
           <View style={[styles.imageContainer, styles.tallLeft]}>
             <Image 
-              source={images[0]} 
+              source={{ uri: images[0] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -363,7 +356,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
           </View>
           <View style={[styles.imageContainer, styles.topRight]}>
             <Image 
-              source={images[1]} 
+              source={{ uri: images[1] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -377,7 +370,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
           </View>
           <View style={[styles.imageContainer, styles.bottomRight]}>
             <Image 
-              source={images[2]} 
+              source={{ uri: images[2] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -391,7 +384,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
           </View>
           <View style={[styles.imageContainer, styles.centerRight]}>
             <Image 
-              source={images[3]} 
+              source={{ uri: images[3] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}
@@ -405,7 +398,7 @@ function OnboardingPage({ title, subtitle, images, isActive, isDark, pageIndex }
           </View>
           <View style={[styles.imageContainer, styles.bottomLeft]}>
             <Image 
-              source={images[4]} 
+              source={{ uri: images[4] }}
               style={styles.image} 
               contentFit="cover" 
               transition={300}

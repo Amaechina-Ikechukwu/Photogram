@@ -11,17 +11,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
+import { SPLASH_IMAGE_URLS } from '@/constants/ImageUrls';
 
 // Configure Google Sign-In
 GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  webClientId: "286455810620-pr86tung61ln28hh3t7v5t0kas4h8u8s.apps.googleusercontent.com"|| process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  offlineAccess: true,
+  scopes: ['profile', 'email'],
 });
 
-// Import splash images
+// Use remote image URLs for better performance
 const splashImages = [
-  require('../../assets/splash-images/y-s-zpWdIbZ_jwM-unsplash.jpg'),
-  require('../../assets/splash-images/laura-cleffmann-gRT7o73xua0-unsplash.jpg'),
-  require('../../assets/splash-images/spenser-sembrat-s7W2PXuYGcc-unsplash.jpg'),
+  SPLASH_IMAGE_URLS.Y_S,
+  SPLASH_IMAGE_URLS.LAURA_CLEFFMANN,
+  SPLASH_IMAGE_URLS.SPENSER_SEMBRAT,
 ];
 
 export default function LoginScreen() {
@@ -59,7 +63,7 @@ export default function LoginScreen() {
         {splashImages.map((image, index) => (
           <View key={index} style={styles.imageContainer}>
             <Image 
-              source={image} 
+              source={{ uri: image }}
               style={styles.image} 
               contentFit="cover"
               cachePolicy="memory-disk"

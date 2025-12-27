@@ -11,17 +11,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
+import { SPLASH_IMAGE_URLS } from '@/constants/ImageUrls';
 
 // Configure Google Sign-In
 GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  offlineAccess: true,
+  scopes: ['profile', 'email'],
 });
 
-// Import splash images
+// Use remote image URLs for better performance
 const splashImages = [
-  require('../../assets/splash-images/madeline-liu-LgSZnc4T0_o-unsplash.jpg'),
-  require('../../assets/splash-images/nik-Us-QFSJjkas-unsplash.jpg'),
-  require('../../assets/splash-images/iryna-studenets-E6GngziykS0-unsplash.jpg'),
+  SPLASH_IMAGE_URLS.MADELINE_LIU,
+  SPLASH_IMAGE_URLS.NIK_US,
+  SPLASH_IMAGE_URLS.IRYNA_STUDENETS,
 ];
 
 export default function SignupScreen() {
@@ -59,7 +63,7 @@ export default function SignupScreen() {
         {splashImages.map((image, index) => (
           <View key={index} style={styles.imageContainer}>
             <Image 
-              source={image} 
+              source={{ uri: image }}
               style={styles.image} 
               contentFit="cover"
               cachePolicy="memory-disk"

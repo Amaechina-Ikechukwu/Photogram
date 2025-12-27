@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SPLASH_IMAGE_URLS } from '@/constants/ImageUrls';
 
 interface SignInPromptModalProps {
     visible: boolean;
@@ -18,13 +19,13 @@ interface SignInPromptModalProps {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Import splash images
+// Use remote image URLs for better performance
 const splashImages = [
-    require('../assets/splash-images/y-s-zpWdIbZ_jwM-unsplash.jpg'),
-    require('../assets/splash-images/laura-cleffmann-gRT7o73xua0-unsplash.jpg'),
-    require('../assets/splash-images/spenser-sembrat-s7W2PXuYGcc-unsplash.jpg'),
-    require('../assets/splash-images/madeline-liu-LgSZnc4T0_o-unsplash.jpg'),
-    require('../assets/splash-images/nik-Us-QFSJjkas-unsplash.jpg'),
+    SPLASH_IMAGE_URLS.Y_S,
+    SPLASH_IMAGE_URLS.LAURA_CLEFFMANN,
+    SPLASH_IMAGE_URLS.SPENSER_SEMBRAT,
+    SPLASH_IMAGE_URLS.MADELINE_LIU,
+    SPLASH_IMAGE_URLS.NIK_US,
 ];
 
 export default function SignInPromptModal({ 
@@ -127,7 +128,7 @@ export default function SignInPromptModal({
                                         ]}
                                     >
                                         <Image 
-                                            source={image} 
+                                            source={{ uri: image }}
                                             style={styles.image} 
                                             contentFit="cover" 
                                             transition={300}

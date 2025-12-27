@@ -15,6 +15,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
+import { SPLASH_IMAGE_URLS } from '@/constants/ImageUrls';
 
 const { width, height } = Dimensions.get('window');
 
@@ -68,7 +69,7 @@ export default function UploadWelcomeModal({
             {/* Hero Image */}
             <View style={styles.imageContainer}>
               <Image
-                source={require('@/assets/splash-images/madeline-liu-LgSZnc4T0_o-unsplash.jpg')}
+                source={{ uri: SPLASH_IMAGE_URLS.MADELINE_LIU }}
                 style={styles.heroImage}
                 contentFit="cover"
                 cachePolicy="memory"
@@ -203,7 +204,7 @@ export default function UploadWelcomeModal({
               {/* Hero Image */}
               <View style={styles.imageContainer}>
                 <Image
-                  source={require('@/assets/splash-images/madeline-liu-LgSZnc4T0_o-unsplash.jpg')}
+                  source={{ uri: SPLASH_IMAGE_URLS.MADELINE_LIU }}
                   style={styles.heroImage}
                   contentFit="cover"
                   cachePolicy="memory"
