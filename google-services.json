@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "286455810620-olobr1b7asolkev5potmp1u0n7ci32rg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ikaychina.photogram",
+            "certificate_hash": "f052f941ac041fffd05c109661fab59c17d0dc50"
+          }
+        },
+        {
           "client_id": "286455810620-pr86tung61ln28hh3t7v5t0kas4h8u8s.apps.googleusercontent.com",
           "client_type": 3
         }

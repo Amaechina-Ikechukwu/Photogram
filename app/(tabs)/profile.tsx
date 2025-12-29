@@ -58,6 +58,7 @@ export default function ProfileScreen() {
     useEffect(() => {
         if (!user && !authContext?.isLoading) {
             setShowAuthModal(true);
+            setLoading(false);
         } else if (user) {
             fetchProfile();
         }
@@ -78,61 +79,61 @@ export default function ProfileScreen() {
     );
 
     const fetchProfile = async () => {
-        if (user) {
-            try {
-                const token = await user.getIdToken();
-                const response = await apiGet(`/users/me`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                    retries: 1,
-                    timeout: 30000
-                });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const result = await response.json();
-                if (result.success) {
-                    setProfile(result.data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch profile:", error);
+        if (!user) return;
+        
+        try {
+            const token = await user.getIdToken();
+            const response = await apiGet(`/users/me`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                retries: 1,
+                timeout: 30000
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const result = await response.json();
+            if (result.success) {
+                setProfile(result.data);
             }
+        } catch (error) {
+            console.error("Failed to fetch profile:", error);
         }
     };
 
     const fetchPhotos = async (pageNum: number) => {
-        if (user && !loadingMore) {
-            if (pageNum === 1) setLoading(true);
-            else setLoadingMore(true);
+        if (!user || loadingMore) return;
+        
+        if (pageNum === 1) setLoading(true);
+        else setLoadingMore(true);
 
-            try {
-                const token = await user.getIdToken();
-                const response = await apiGet(`/users/photos?page=${pageNum}&pageSize=10`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                    retries: 1,
-                    timeout: 30000
-                });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const result = await response.json();
-   ;
-                if (result.success) {
-                    if (result.data.length > 0) {
-                        const newPhotos = pageNum === 1 ? result.data : [...photos, ...result.data];
-                      
-                        setPhotos(newPhotos);
-                        setFilteredPhotos(newPhotos);
-                        setPage(pageNum + 1);
-                    } else {
-                        setHasMore(false);
-                    }
+        try {
+            const token = await user.getIdToken();
+            const response = await apiGet(`/users/photos?page=${pageNum}&pageSize=10`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                retries: 1,
+                timeout: 30000
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const result = await response.json();
+
+            if (result.success) {
+                if (result.data.length > 0) {
+                    const newPhotos = pageNum === 1 ? result.data : [...photos, ...result.data];
+                  
+                    setPhotos(newPhotos);
+                    setFilteredPhotos(newPhotos);
+                    setPage(pageNum + 1);
+                } else {
+                    setHasMore(false);
                 }
-            } catch (error) {
-                console.error("Failed to fetch photos:", error);
-            } finally {
-                if (pageNum === 1) setLoading(false);
-                else setLoadingMore(false);
             }
+        } catch (error) {
+            console.error("Failed to fetch photos:", error);
+        } finally {
+            if (pageNum === 1) setLoading(false);
+            else setLoadingMore(false);
         }
     };
 

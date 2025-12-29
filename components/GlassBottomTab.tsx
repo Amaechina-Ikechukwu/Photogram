@@ -7,7 +7,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TAB_BAR_WIDTH = 200;
+const TAB_BAR_WIDTH = 280;
 
 export default function GlassBottomTab({ state, descriptors, navigation }: BottomTabBarProps) {
   const colorScheme = useColorScheme();
@@ -136,5 +136,6 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
 });
