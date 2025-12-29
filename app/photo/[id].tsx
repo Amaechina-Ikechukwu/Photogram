@@ -74,6 +74,7 @@ function PhotoPage({ photo, user }: PublicPhoto) {
     const [overlayVisible, setOverlayVisible] = useState(true);
     const overlayOpacity = useRef(new Animated.Value(1)).current;
     const translateY = useRef(new Animated.Value(0)).current;
+    const autoHideTimer = useRef<NodeJS.Timeout | null>(null);
   
     const panResponder = useRef(
       PanResponder.create({
@@ -118,33 +119,57 @@ function PhotoPage({ photo, user }: PublicPhoto) {
         })
       : 'Unknown date';
   
-    useEffect(() => {
-      let timer: NodeJS.Timeout;
-      if (overlayVisible) {
-        timer = setTimeout(() => {
-          hideOverlay();
-        }, 5000);
-      }
-      return () => clearTimeout(timer);
-    }, [overlayVisible]);
+    const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-    const toggleOverlay = () => {
-      setOverlayVisible(!overlayVisible);
+    const hideOverlay = () => {
+      if (autoHideTimerRef.current) {
+        clearTimeout(autoHideTimerRef.current);
+        autoHideTimerRef.current = null;
+      }
+      setOverlayVisible(false);
       Animated.timing(overlayOpacity, {
-        toValue: overlayVisible ? 0 : 1,
+        toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
     };
   
-        const hideOverlay = () => {
-          setOverlayVisible(false);
-          Animated.timing(overlayOpacity, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }).start();
-        };
+    const toggleOverlay = () => {
+      const newVisibility = !overlayVisible;
+      setOverlayVisible(newVisibility);
+      
+      // Clear existing timer
+      if (autoHideTimerRef.current) {
+        clearTimeout(autoHideTimerRef.current);
+        autoHideTimerRef.current = null;
+      }
+      
+      Animated.timing(overlayOpacity, {
+        toValue: newVisibility ? 1 : 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      
+      // Start new timer if showing overlay
+      if (newVisibility) {
+        autoHideTimerRef.current = setTimeout(() => {
+          hideOverlay();
+        }, 5000);
+      }
+    };
+  
+    useEffect(() => {
+      // Initial auto-hide timer
+      autoHideTimerRef.current = setTimeout(() => {
+        hideOverlay();
+      }, 5000);
+      
+      return () => {
+        if (autoHideTimerRef.current) {
+          clearTimeout(autoHideTimerRef.current);
+        }
+      };
+    }, []);
     
         return (
           <ThemedView style={styles.container}>
@@ -161,7 +186,6 @@ function PhotoPage({ photo, user }: PublicPhoto) {
                   source={{ uri: photo.imageUrl as string }}
                   style={styles.image}
                   contentFit="contain"
-                  sharedTransitionTag={`photo-${photo.imageUrl}`}
                   cachePolicy="memory-disk"
                   recyclingKey={photo.imageUrl as string}
                   allowDownscaling={true}
@@ -170,28 +194,31 @@ function PhotoPage({ photo, user }: PublicPhoto) {
               </Pressable>
             </Animated.View>
       
-            <Animated.View style={[
-              styles.overlay, 
-              { 
-                opacity: overlayOpacity,
-                transform: [{ translateY }]
-              }
-            ]}>
+            <Animated.View 
+              pointerEvents={overlayVisible ? 'auto' : 'none'}
+              style={[
+                styles.overlay, 
+                { 
+                  opacity: overlayOpacity,
+                  transform: [{ translateY }]
+                }
+              ]}
+            >
             <SafeAreaView edges={['bottom']} style={styles.bottomInfoWrapper}>
               <BlurView intensity={90} tint="dark" style={styles.compactInfoContainer}>
                 {/* User Info Row */}
                 <View style={styles.compactUserRow}>
                   <View style={styles.compactUserAvatar}>
                     <ThemedText style={styles.compactAvatarText}>
-                      {(user.name || 'A').charAt(0).toUpperCase()}
+                    {((user.name || (user as any).Name) || 'A').charAt(0).toUpperCase()}
                     </ThemedText>
                   </View>
                   <View style={styles.compactUserDetails}>
                     <ThemedText type="defaultSemiBold" style={styles.compactUserName}>
-                      {user.name || 'Anonymous'}
+                      {user.name || (user as any).Name || 'Anonymous'}
                     </ThemedText>
                     <ThemedText style={styles.compactUserEmail}>
-                      {user.email}
+                      {user.email || (user as any).Email}
                     </ThemedText>
                   </View>
                 </View>
@@ -200,15 +227,15 @@ function PhotoPage({ photo, user }: PublicPhoto) {
                 <View style={styles.compactStatsRow}>
                   <View style={styles.compactStatItem}>
                     <Ionicons name="images-outline" size={16} color={Colors.dark.tint} />
-                    <ThemedText style={styles.compactStatValue}>{user.numberOfUploads}</ThemedText>
+                    <ThemedText style={styles.compactStatValue}>{user.numberOfUploads || (user as any).NumberOfUploads || 0}</ThemedText>
                   </View>
                   <View style={styles.compactStatItem}>
                     <Ionicons name="eye-outline" size={16} color={Colors.dark.tint} />
-                    <ThemedText style={styles.compactStatValue}>{user.totalViews}</ThemedText>
+                    <ThemedText style={styles.compactStatValue}>{user.totalViews || (user as any).TotalViews || 0}</ThemedText>
                   </View>
                   <View style={styles.compactStatItem}>
                     <Ionicons name="heart-outline" size={16} color={Colors.dark.tint} />
-                    <ThemedText style={styles.compactStatValue}>{user.totalLikes}</ThemedText>
+                    <ThemedText style={styles.compactStatValue}>{user.totalLikes || (user as any).TotalLikes || 0}</ThemedText>
                   </View>
                   <View style={styles.compactDivider} />
                   <ThemedText style={styles.compactInfoText}>{photo.category || 'N/A'}</ThemedText>
@@ -274,7 +301,7 @@ export default function PhotoDetailScreen() {
             ref={flatListRef}
             data={photos}
             renderItem={renderItem}
-            keyExtractor={(item) => item.photo.id || item.photo.imageUrl}
+            keyExtractor={(item, index) => `${item.photo.id || item.photo.imageUrl}-${index}`}
             horizontal
             pagingEnabled
             initialScrollIndex={initialIndex}

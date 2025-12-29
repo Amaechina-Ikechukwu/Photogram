@@ -4,6 +4,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { SafeAreaView } from "react-native-safe-area-context";
 import UploadProgressBar from "@/components/UploadProgressBar";
+import SignInPromptModal from '@/components/SignInPromptModal';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -54,20 +55,43 @@ export default function CollectionsScreen() {
   const [page, setPage] = useState<number>(1);
   const [pageSize] = useState<number>(5);
   const [hasMore, setHasMore] = useState<boolean>(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const auth = useAuth();
   const user = auth?.user;
+  const isAuthLoading = auth?.isLoading;
+
+  // Show auth modal if user is not authenticated
+  useEffect(() => {
+    if (!user && !isAuthLoading) {
+      setShowAuthModal(true);
+      setLoading(false);
+    }
+  }, [user, isAuthLoading]);
 
   useEffect(() => {
+    // Don't fetch until auth state is determined and user is authenticated
+    if (isAuthLoading || !user) return;
+
     const fetchCategories = async (pageNum: number = 1) => {
       try {
-        const token = await user?.getIdToken();
+        const token = user ? await user.getIdToken() : null;
         const response = await apiGet(`/photos/categories?page=${pageNum}&pageSize=${pageSize}`, {
           headers: {
+            'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           retries: 1,
           timeout: 30000
         });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API Error:', response.status, errorText);
+          setError(`Failed to load collections: ${response.status === 401 ? 'This feature requires authentication' : errorText}`);
+          setLoading(false);
+          return;
+        }
+        
         const result = await response.json();
 
         // Accept both 'success' and misspelled 'sucess' from API
@@ -114,7 +138,7 @@ export default function CollectionsScreen() {
     };
 
     fetchCategories(page);
-  }, []);
+  }, [isAuthLoading]);
    const colorScheme = useColorScheme();
       const colors = Colors[colorScheme ?? 'light'];
 
@@ -201,6 +225,28 @@ export default function CollectionsScreen() {
       />
     </View>
   );
+
+  if (!user && !isAuthLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <ThemedView style={styles.center}>
+          <Ionicons name="images-outline" size={80} color={colors.icon} />
+          <ThemedText type="subtitle" style={{ marginTop: 16 }}>
+            Sign in to view collections
+          </ThemedText>
+          <ThemedText style={{ marginTop: 8, opacity: 0.7 }}>
+            Browse curated photo collections
+          </ThemedText>
+        </ThemedView>
+        <SignInPromptModal 
+          visible={showAuthModal} 
+          onClose={() => setShowAuthModal(false)}
+          title="Sign In to View Collections"
+          message="Sign in to browse and explore curated photo collections"
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (

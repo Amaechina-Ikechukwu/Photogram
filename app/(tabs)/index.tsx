@@ -126,12 +126,18 @@ export default function PhotosScreen() {
   };
 
   const openPhotoDetail = (item: PublicPhoto, index: number) => {
+    // Only pass nearby photos to reduce data transfer (10 before and after current)
+    const startIndex = Math.max(0, index - 10);
+    const endIndex = Math.min(photos.length, index + 11);
+    const nearbyPhotos = photos.slice(startIndex, endIndex);
+    const adjustedIndex = index - startIndex;
+    
     router.push({
       pathname: `/photo/[id]` as any,
       params: {
         id: item.photo.id || '',
-        photos: JSON.stringify(photos),
-        index: String(index),
+        photos: JSON.stringify(nearbyPhotos),
+        index: String(adjustedIndex),
       },
     });
   };
@@ -211,7 +217,7 @@ export default function PhotosScreen() {
   );
 
   const renderFooter = () => {
-    if (!loading) return null;
+    if (!loading || photos.length === 0) return null;
     return (
       <View style={styles.loadingMore}>
         <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].text} />

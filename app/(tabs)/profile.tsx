@@ -59,6 +59,9 @@ export default function ProfileScreen() {
         if (!user && !authContext?.isLoading) {
             setShowAuthModal(true);
             setLoading(false);
+            setProfile(null);
+            setPhotos([]);
+            setFilteredPhotos([]);
         } else if (user) {
             fetchProfile();
         }
@@ -74,6 +77,7 @@ export default function ProfileScreen() {
             } else if (!authContext?.isLoading) {
                 // Show auth modal when user navigates to profile while not signed in
                 setShowAuthModal(true);
+                setLoading(false);
             }
         }, [user, authContext?.isLoading])
     );
@@ -138,12 +142,17 @@ export default function ProfileScreen() {
     };
 
     const loadMore = () => {
-        if (!loadingMore && hasMore) {
-            fetchPhotos(page);
+        if (!user || !loadingMore && hasMore) {
+            return;
         }
+        fetchPhotos(page);
     };
 
     const onRefresh = useCallback(async () => {
+        if (!user) {
+            setRefreshing(false);
+            return;
+        }
         setRefreshing(true);
         setHasMore(true);
         setPage(1);

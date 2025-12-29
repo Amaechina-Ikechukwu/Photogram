@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import GlassBackground from './ui/GlassBackground';
 import { ThemedText } from './ThemedText';
 
@@ -75,13 +77,30 @@ export default function PhotoItem({ item, index, onPress, onLike }: PhotoItemPro
         autoplay={false}
       />
       
+      {/* Top gradient overlay */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.3)', 'transparent']}
+        style={styles.topGradient}
+        pointerEvents="none"
+      />
+      
+      {/* Bottom gradient overlay */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.6)']}
+        style={styles.bottomGradient}
+        pointerEvents="none"
+      />
+      
       {/* Author name with glass background */}
       <View style={styles.authorContainer}>
         <GlassBackground style={styles.authorGlass}>
           <View style={styles.authorContent}>
             <Ionicons name="person-circle-outline" size={20} color="#fff" />
             <ThemedText style={styles.authorName}>
-              {item.user.name || item.user.email.split('@')[0]}
+              {item.user.name || (item.user as any).Name || 
+               ((item.user.email || (item.user as any).Email) ? 
+                 ((item.user.email || (item.user as any).Email).split('@')[0]) : 
+                 'Anonymous')}
             </ThemedText>
           </View>
         </GlassBackground>
@@ -151,5 +170,21 @@ const styles = StyleSheet.create({
   },
   heartButton: {
     padding: 10,
+  },
+  topGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    zIndex: 0,
+  },
+  bottomGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    zIndex: 0,
   },
 });
