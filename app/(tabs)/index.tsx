@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import PhotoItem from '@/components/PhotoItem';
 import { apiGet, apiPost } from '@/utils/api';
+import CommentsBottomSheet from '@/components/CommentsBottomSheet';
 
 interface PhotoData {
   uid: string;
@@ -43,6 +44,8 @@ export default function PhotosScreen() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const colorScheme = useColorScheme();
   const authContext = useAuth();
   const user = authContext?.user;
@@ -126,18 +129,13 @@ export default function PhotosScreen() {
   };
 
   const openPhotoDetail = (item: PublicPhoto, index: number) => {
-    // Only pass nearby photos to reduce data transfer (10 before and after current)
-    const startIndex = Math.max(0, index - 10);
-    const endIndex = Math.min(photos.length, index + 11);
-    const nearbyPhotos = photos.slice(startIndex, endIndex);
-    const adjustedIndex = index - startIndex;
-    
+    // Open only the single image
     router.push({
       pathname: `/photo/[id]` as any,
       params: {
         id: item.photo.id || '',
-        photos: JSON.stringify(nearbyPhotos),
-        index: String(adjustedIndex),
+        photos: JSON.stringify([item]),
+        index: String(0),
       },
     });
   };
@@ -201,6 +199,12 @@ export default function PhotosScreen() {
             console.error('Error toggling like:', err);
             // Revert optimistic update
             setPhotos(prevPhotos);
+          }
+        }}
+        onComment={(photo: PublicPhoto) => {
+          if (photo.photo.id) {
+            setSelectedPhotoId(photo.photo.id);
+            setShowComments(true);
           }
         }}
       />
@@ -290,6 +294,14 @@ export default function PhotosScreen() {
         </ThemedView>
       </ParallaxScrollView>
 
+      <CommentsBottomSheet
+        visible={showComments}
+        onClose={() => {
+          setShowComments(false);
+          setSelectedPhotoId(null);
+        }}
+        photoId={selectedPhotoId || ''}
+      />
     </ThemedView>
   );
 }

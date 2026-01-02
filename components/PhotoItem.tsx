@@ -37,9 +37,10 @@ interface PhotoItemProps {
   onPress: (item: PublicPhoto, index: number) => void;
   // onLike will be called with the item and the new liked state (true = liked)
   onLike?: (item: PublicPhoto, newLiked: boolean) => void;
+  onComment?: (item: PublicPhoto) => void;
 }
 
-export default function PhotoItem({ item, index, onPress, onLike }: PhotoItemProps) {
+export default function PhotoItem({ item, index, onPress, onLike, onComment }: PhotoItemProps) {
   const [imageError, setImageError] = useState(false);
   const [liked, setLiked] = useState(item.hasLiked);
 
@@ -118,6 +119,21 @@ export default function PhotoItem({ item, index, onPress, onLike }: PhotoItemPro
           </TouchableOpacity>
         </GlassBackground>
       </View>
+
+      {/* Comment button with glass background */}
+      {onComment && (
+        <View style={styles.commentContainer}>
+          <GlassBackground style={styles.commentGlass}>
+            <TouchableOpacity onPress={() => onComment(item)} style={styles.commentButton}>
+              <Ionicons
+                name="chatbubble-outline"
+                size={22}
+                color="#fff"
+              />
+            </TouchableOpacity>
+          </GlassBackground>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -169,6 +185,18 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   heartButton: {
+    padding: 10,
+  },
+  commentContainer: {
+    position: 'absolute',
+    bottom: 10,
+    left: 70,
+    zIndex: 1,
+  },
+  commentGlass: {
+    borderRadius: 25,
+  },
+  commentButton: {
     padding: 10,
   },
   topGradient: {
