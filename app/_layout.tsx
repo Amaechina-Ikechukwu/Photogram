@@ -9,11 +9,40 @@ import 'react-native-reanimated';
 // Firebase
 import { ActivityIndicator } from 'react-native';
 import { ToastProvider } from '@/components/ToastProvider';
-import { AuthProvider } from '../context/AuthContext';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 import { UploadProvider } from '../context/UploadContext';
+import { apiPut } from '../utils/api';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
+
+function UserSync() {
+  const { user } = useAuth() || {};
+
+  useEffect(() => {
+    if (user) {
+      const syncUser = async () => {
+        try {
+          const token = await user.getIdToken();
+          await apiPut('/users', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              name: user.displayName,
+            }),
+          });
+        } catch (error) {
+          console.error('Failed to sync user data:', error);
+        }
+      };
+      syncUser();
+    }
+  }, [user]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -34,6 +63,7 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
+      <UserSync />
       <UploadProvider>
         <ToastProvider>
           <Stack>

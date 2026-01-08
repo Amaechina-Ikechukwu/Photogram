@@ -119,3 +119,16 @@ export async function apiDelete(
     method: 'DELETE',
   });
 }
+
+/**
+ * Convenience wrapper for PUT requests with retry
+ */
+export async function apiPut(
+  endpoint: string,
+  options: Omit<FetchWithRetryOptions, 'method'> = {}
+): Promise<Response> {
+  return fetchWithRetry(`${process.env.EXPO_PUBLIC_API_URL}${endpoint}`, {
+    ...options,
+    method: 'PUT',
+  });
+}

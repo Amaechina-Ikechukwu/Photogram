@@ -62,7 +62,7 @@ export function AuthProvider(props: React.PropsWithChildren) {
     React.useEffect(() => {
         if (user) {
             user.getIdToken().then((token) => {
-                console.log('ID Token:', token);
+                // console.log('ID Token:', token);
             });
         }
     }, [user]);

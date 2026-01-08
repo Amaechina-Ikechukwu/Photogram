@@ -46,6 +46,43 @@ interface Section {
   data: PhotoItem[];
 }
 
+const CollectionPhoto = ({ item, index, sectionData }: { item: PhotoItem; index: number; sectionData: PhotoItem[] }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
+  return (
+    <Pressable
+      onPress={() => {
+        const postId = item.photo.id || '';
+        // Pass the photos (including user info) from this section so the detail screen can allow swiping within the section
+        const photosForSection = sectionData; 
+        router.push({
+          pathname: `/photo/[id]` as any,
+          params: {
+            id: postId,
+            photos: JSON.stringify(photosForSection),
+            index: String(index),
+          },
+        });
+      }}
+      style={styles.photoContainer}
+    >
+      <Image 
+        source={{ uri: item.photo.imageUrl }} 
+        style={styles.photo}
+        onLoadStart={() => setIsLoading(true)}
+        onLoadEnd={() => setIsLoading(false)}
+      />
+      {isLoading && (
+        <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="small" color={colors.tint} />
+        </View>
+      )}
+    </Pressable>
+  );
+};
+
 export default function CollectionsScreen() {
   const [sections, setSections] = useState<Section[]>([]);
   const [filteredSections, setFilteredSections] = useState<Section[]>([]);
@@ -200,24 +237,7 @@ export default function CollectionsScreen() {
         horizontal
         data={section.data}
         renderItem={({ item, index }: { item: PhotoItem; index: number }) => (
-          <Pressable
-            onPress={() => {
-              const postId = item.photo.id || '';
-              // Pass the photos (including user info) from this section so the detail screen can allow swiping within the section
-              const photosForSection = section.data; // Section already contains PhotoItem objects ({ photo, user, hasLiked })
-              router.push({
-                pathname: `/photo/[id]` as any,
-                params: {
-                  id: postId,
-                  photos: JSON.stringify(photosForSection),
-                  index: String(index),
-                },
-              });
-            }}
-            style={styles.photoContainer}
-          >
-            <Image source={{ uri: item.photo.imageUrl }} style={styles.photo} />
-          </Pressable>
+          <CollectionPhoto item={item} index={index} sectionData={section.data} />
         )}
         keyExtractor={(item) => item.photo.id}
         showsHorizontalScrollIndicator={false}
@@ -368,5 +388,10 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

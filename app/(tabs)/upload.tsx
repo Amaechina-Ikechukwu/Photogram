@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Pressable, StyleSheet, FlatList, Dimensions, Alert, ActivityIndicator } from 'react-native';
+import { Pressable, StyleSheet, FlatList, Dimensions, Alert, ActivityIndicator, Platform, PermissionsAndroid } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/ThemedText';
@@ -30,6 +30,9 @@ export default function UploadScreen() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [hasCheckedWelcome, setHasCheckedWelcome] = useState(false);
+  const [albums, setAlbums] = useState<MediaLibrary.Album[]>([]);
+  const [selectedAlbum, setSelectedAlbum] = useState<MediaLibrary.Album | null>(null);
+  const [showAlbumPicker, setShowAlbumPicker] = useState(false);
   
   const colorScheme = useColorScheme();
   const { uploading, uploads, setImagesToUpload } = useUpload();
@@ -96,22 +99,55 @@ export default function UploadScreen() {
 
   const requestPermissions = async () => {
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      // Request full media library permissions (includes all folders)
+      const { status, canAskAgain, granted, accessPrivileges } = await MediaLibrary.requestPermissionsAsync(true);
       setPermissionStatus(status);
       
       if (status !== 'granted') {
         Alert.alert(
           'Permission Required',
-          'We need camera roll permissions to select photos for upload.',
+          'We need full media library access to view all your photos, including downloads and other folders.',
           [{ text: 'OK' }]
         );
         return;
       }
 
+      // Request ACCESS_MEDIA_LOCATION permission on Android 10+ (API 29+)
+      if (Platform.OS === 'android' && Platform.Version >= 29) {
+        try {
+          const result = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_MEDIA_LOCATION,
+            {
+              title: 'Media Location Permission',
+              message: 'This app needs access to photo metadata to display your images correctly.',
+              buttonPositive: 'OK',
+            }
+          );
+          if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('Media location permission denied');
+          }
+        } catch (err) {
+          console.warn('Error requesting media location permission:', err);
+        }
+      }
+
+      await loadAlbums();
       await loadImages();
     } catch (error) {
       console.error('Permission error:', error);
       Alert.alert('Error', 'Failed to request permissions');
+    }
+  };
+
+  const loadAlbums = async () => {
+    try {
+      const albumsResult = await MediaLibrary.getAlbumsAsync({
+        includeSmartAlbums: true,
+      });
+      setAlbums(albumsResult);
+      console.log(`Found ${albumsResult.length} albums`);
+    } catch (error) {
+      console.error('Error loading albums:', error);
     }
   };
 
@@ -124,10 +160,13 @@ export default function UploadScreen() {
       assetsResult = await MediaLibrary.getAssetsAsync({
         first: 100,
         after,
-        sortBy: [MediaLibrary.SortBy.creationTime],
+        sortBy: [[MediaLibrary.SortBy.creationTime, false]], // false = descending (newest first)
         mediaType: [MediaLibrary.MediaType.photo],
+        // Filter by album if one is selected, otherwise show all
+        ...(selectedAlbum && { album: selectedAlbum }),
       });
       
+      console.log(`Loaded ${assetsResult.assets.length} images, hasNextPage: ${assetsResult.hasNextPage}`);
       setImages(prev => (after ? [...prev, ...assetsResult.assets] : assetsResult.assets));
       setHasNextPage(assetsResult.hasNextPage);
       setEndCursor(assetsResult.endCursor);
@@ -160,7 +199,35 @@ export default function UploadScreen() {
     router.push('/upload/confirmation');
   };
 
-  const renderItem = ({ item }: { item: MediaLibrary.Asset }) => {
+  const handleAlbumSelect = async (album: MediaLibrary.Album | null) => {
+    setSelectedAlbum(album);
+    setShowAlbumPicker(false);
+    setImages([]);
+    setHasNextPage(true);
+    setEndCursor(undefined);
+    setSelectedImages([]);
+    // Reload images with new album filter
+    await loadImages();
+  };
+
+  const renderItem = ({ item, index }: { item: MediaLibrary.Asset | 'album-selector'; index: number }) => {
+    // Special cell for album selector
+    if (item === 'album-selector') {
+      return (
+        <Pressable
+          onPress={() => setShowAlbumPicker(true)}
+          style={styles.imageContainer}
+        >
+          <ThemedView style={[styles.image, styles.albumSelectorCell]}>
+            <MaterialIcons name="photo-library" size={40} color={colors.tint} />
+            <ThemedText style={styles.albumSelectorText}>
+              {selectedAlbum ? selectedAlbum.title : 'All Photos'}
+            </ThemedText>
+          </ThemedView>
+        </Pressable>
+      );
+    }
+
     const isSelected = selectedImages.includes(item.id);
     const disabled = !isSelected && selectedImages.length >= 3;
 
@@ -174,10 +241,15 @@ export default function UploadScreen() {
           source={{ uri: item.uri }} 
           style={styles.image}
           contentFit="cover"
-          cachePolicy="memory"
+          cachePolicy="memory-disk"
           recyclingKey={item.id}
           allowDownscaling={true}
           priority="normal"
+          placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+          transition={200}
+          onError={(error) => {
+            console.warn(`Failed to load image ${item.id}:`, error);
+          }}
         />
 
         {isSelected && (
@@ -256,16 +328,58 @@ export default function UploadScreen() {
             <ThemedText style={styles.permissionText}>Loading photos...</ThemedText>
           </ThemedView>
         ) : (
-          <FlatList
-            data={images}
-            renderItem={renderItem}
-            keyExtractor={item => item.id}
-            numColumns={3}
-            contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100 }}
-            onEndReached={() => loadImages(endCursor)}
-            onEndReachedThreshold={0.5}
-            ListFooterComponent={loadingMore ? <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} /> : null}
-          />
+          <>
+            <FlatList
+              data={['album-selector' as const, ...images]}
+              renderItem={renderItem}
+              keyExtractor={(item, index) => item === 'album-selector' ? 'album-selector' : item.id}
+              numColumns={3}
+              contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100 }}
+              onEndReached={() => loadImages(endCursor)}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={loadingMore ? <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} /> : null}
+            />
+
+            {/* Album Picker Modal */}
+            {showAlbumPicker && (
+              <Pressable 
+                style={styles.modalOverlay}
+                onPress={() => setShowAlbumPicker(false)}
+              >
+                <Pressable style={styles.albumPickerModal} onPress={e => e.stopPropagation()}>
+                  <ThemedView style={styles.albumPickerContent}>
+                    <ThemedText type="subtitle" style={styles.albumPickerTitle}>Select Album</ThemedText>
+                    
+                    <Pressable
+                      onPress={() => handleAlbumSelect(null)}
+                      style={[styles.albumItem, !selectedAlbum && styles.albumItemSelected]}
+                    >
+                      <MaterialIcons name="photo" size={24} color={colors.tint} />
+                      <ThemedText style={styles.albumName}>All Photos</ThemedText>
+                      {!selectedAlbum && <MaterialIcons name="check" size={20} color={colors.tint} />}
+                    </Pressable>
+
+                    <FlatList
+                      data={albums}
+                      keyExtractor={album => album.id}
+                      renderItem={({ item: album }) => (
+                        <Pressable
+                          onPress={() => handleAlbumSelect(album)}
+                          style={[styles.albumItem, selectedAlbum?.id === album.id && styles.albumItemSelected]}
+                        >
+                          <MaterialIcons name="photo-album" size={24} color={colors.tint} />
+                          <ThemedText style={styles.albumName}>{album.title}</ThemedText>
+                          <ThemedText style={styles.albumCount}>({album.assetCount})</ThemedText>
+                          {selectedAlbum?.id === album.id && <MaterialIcons name="check" size={20} color={colors.tint} />}
+                        </Pressable>
+                      )}
+                      style={styles.albumList}
+                    />
+                  </ThemedView>
+                </Pressable>
+              </Pressable>
+            )}
+          </>
         )}
 
         {selectedImages.length > 0 && (
@@ -369,7 +483,7 @@ const styles = StyleSheet.create({
   },
   floatingButton: {
     position: 'absolute',
-    bottom: 50,
+    bottom: 80,
     left: 16,
     right: 16,
     shadowColor: '#000',
@@ -384,5 +498,66 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  albumSelectorCell: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(128, 128, 128, 0.3)',
+    gap: 8,
+  },
+  albumSelectorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  albumPickerModal: {
+    width: '85%',
+    maxHeight: '70%',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  albumPickerContent: {
+    padding: 20,
+    maxHeight: 500,
+  },
+  albumPickerTitle: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  albumList: {
+    maxHeight: 400,
+  },
+  albumItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 12,
+    marginBottom: 8,
+  },
+  albumItemSelected: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
+  albumName: {
+    flex: 1,
+    fontSize: 16,
+  },
+  albumCount: {
+    fontSize: 14,
+    opacity: 0.6,
   },
 });
