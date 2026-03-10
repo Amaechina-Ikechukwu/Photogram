@@ -9,20 +9,29 @@ interface FetchWithRetryOptions extends RequestInit {
   timeout?: number;
 }
 
-/**
- * Enhanced fetch function with retry logic and timeout support
- * @param url - The URL to fetch
- * @param options - Fetch options plus retry configuration
- * @returns Promise with the fetch response
- */
+function getApiBaseUrl(): string {
+  const baseUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+
+  if (!baseUrl) {
+    throw new Error('EXPO_PUBLIC_API_URL is not configured');
+  }
+
+  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+}
+
+function createApiUrl(endpoint: string): string {
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${getApiBaseUrl()}${normalizedEndpoint}`;
+}
+
 export async function fetchWithRetry(
   url: string,
   options: FetchWithRetryOptions = {}
 ): Promise<Response> {
   const {
-    retries = 1, // Default: retry once on failure
-    retryDelay = 1000, // Default: 1 second delay between retries
-    timeout = 30000, // Default: 30 second timeout
+    retries = 1,
+    retryDelay = 1000,
+    timeout = 30000,
     ...fetchOptions
   } = options;
 
@@ -30,7 +39,6 @@ export async function fetchWithRetry(
   
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      // Create abort controller for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -41,13 +49,10 @@ export async function fetchWithRetry(
 
       clearTimeout(timeoutId);
 
-      // If response is ok or client error (4xx), don't retry
-      // Only retry on server errors (5xx) or network failures
       if (response.ok || (response.status >= 400 && response.status < 500)) {
         return response;
       }
 
-      // Server error - will retry if attempts remain
       if (attempt < retries) {
         console.log(`Request failed with status ${response.status}, retrying (${attempt + 1}/${retries})...`);
         await delay(retryDelay);
@@ -58,7 +63,6 @@ export async function fetchWithRetry(
     } catch (error: any) {
       lastError = error;
       
-      // Don't retry on abort (timeout) for last attempt
       if (error.name === 'AbortError') {
         console.error(`Request timeout after ${timeout}ms`);
       }
@@ -70,64 +74,48 @@ export async function fetchWithRetry(
     }
   }
 
-  // All retries exhausted
   throw lastError || new Error('Request failed after all retries');
 }
 
-/**
- * Helper function to delay execution
- */
 function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Convenience wrapper for GET requests with retry
- */
 export async function apiGet(
   endpoint: string,
   options: Omit<FetchWithRetryOptions, 'method'> = {}
 ): Promise<Response> {
-  return fetchWithRetry(`${process.env.EXPO_PUBLIC_API_URL}${endpoint}`, {
+  return fetchWithRetry(createApiUrl(endpoint), {
     ...options,
     method: 'GET',
   });
 }
 
-/**
- * Convenience wrapper for POST requests with retry
- */
 export async function apiPost(
   endpoint: string,
   options: Omit<FetchWithRetryOptions, 'method'> = {}
 ): Promise<Response> {
-  return fetchWithRetry(`${process.env.EXPO_PUBLIC_API_URL}${endpoint}`, {
+  return fetchWithRetry(createApiUrl(endpoint), {
     ...options,
     method: 'POST',
   });
 }
 
-/**
- * Convenience wrapper for DELETE requests with retry
- */
 export async function apiDelete(
   endpoint: string,
   options: Omit<FetchWithRetryOptions, 'method'> = {}
 ): Promise<Response> {
-  return fetchWithRetry(`${process.env.EXPO_PUBLIC_API_URL}${endpoint}`, {
+  return fetchWithRetry(createApiUrl(endpoint), {
     ...options,
     method: 'DELETE',
   });
 }
 
-/**
- * Convenience wrapper for PUT requests with retry
- */
 export async function apiPut(
   endpoint: string,
   options: Omit<FetchWithRetryOptions, 'method'> = {}
 ): Promise<Response> {
-  return fetchWithRetry(`${process.env.EXPO_PUBLIC_API_URL}${endpoint}`, {
+  return fetchWithRetry(createApiUrl(endpoint), {
     ...options,
     method: 'PUT',
   });

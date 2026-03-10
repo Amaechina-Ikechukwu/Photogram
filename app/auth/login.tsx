@@ -1,10 +1,9 @@
 import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
 import { auth } from "@/firebaseConfig";
 import { router } from "expo-router";
 import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
-import { useState, useEffect } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Platform, View, useColorScheme } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, View, useColorScheme } from "react-native";
 import { useToast } from "@/components/ToastProvider";
 import { useAuth } from "../../context/AuthContext";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,16 +11,10 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { SPLASH_IMAGE_URLS } from '@/constants/ImageUrls';
+import { configureGoogleSignIn } from '@/utils/googleSignIn';
 
-// Configure Google Sign-In
-GoogleSignin.configure({
-  webClientId: "286455810620-pr86tung61ln28hh3t7v5t0kas4h8u8s.apps.googleusercontent.com"|| process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-  offlineAccess: true,
-  scopes: ['profile', 'email'],
-});
+configureGoogleSignIn();
 
-// Use remote image URLs for better performance
 const splashImages = [
   SPLASH_IMAGE_URLS.Y_S,
   SPLASH_IMAGE_URLS.LAURA_CLEFFMANN,
@@ -38,15 +31,19 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      await GoogleSignin.hasPlayServices();
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const userInfo = await GoogleSignin.signIn();
-      const { idToken } = userInfo.data!;
+      const idToken = userInfo.data?.idToken;
+
+      if (!idToken) {
+        throw new Error('Google did not return an ID token.');
+      }
       
       const credential = GoogleAuthProvider.credential(idToken);
       const result = await signInWithCredential(auth, credential);
       authContext?.setUser(result.user);
       toast.show("Logged in successfully with Google!", { type: "success" });
-      router.replace("/");
+      router.replace('/(tabs)');
     } catch (err: any) {
       const msg = err?.message ?? "Google Sign-In failed";
       toast.show(msg, { type: "error" });
@@ -58,7 +55,6 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Background Images */}
       <View style={styles.imageGrid}>
         {splashImages.map((image, index) => (
           <View key={index} style={styles.imageContainer}>
@@ -75,7 +71,6 @@ export default function LoginScreen() {
         ))}
       </View>
 
-      {/* Gradient Overlay */}
       <LinearGradient
         colors={
           isDark
@@ -85,9 +80,7 @@ export default function LoginScreen() {
         style={styles.overlay}
       />
 
-      {/* Content */}
       <View style={styles.content}>
-        {/* App Icon */}
         <View style={styles.iconContainer}>
           <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={styles.iconBlur}>
             <Image
@@ -106,7 +99,6 @@ export default function LoginScreen() {
           Sign in with your Google account to continue
         </ThemedText>
 
-        {/* Google Sign-In Button */}
         <Pressable 
           style={styles.googleButton} 
           onPress={handleGoogleSignIn}

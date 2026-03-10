@@ -49,6 +49,50 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:286455810620:android:c509ac7844298978bdd139",
+        "android_client_info": {
+          "package_name": "com.rm.photogram"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "286455810620-264fdm4ve6n5m9lfmkrdqhos63vr4flm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rm.photogram",
+            "certificate_hash": "c06ce890de263658080927b63f86e7b40a1106b2"
+          }
+        },
+        {
+          "client_id": "286455810620-pr86tung61ln28hh3t7v5t0kas4h8u8s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATY62KrbmdNqFZZsjWZjGkhoKUFshGqEg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "286455810620-itainob5pb3peim3ljhvqpeipa0l4484.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "286455810620-80r77k91v9g6h2ci3scjddeoeac91i0h.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ikaychina.photogram"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

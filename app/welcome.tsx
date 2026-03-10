@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SPLASH_IMAGES_ARRAY } from '@/constants/ImageUrls';
+import { useAuth } from '@/context/AuthContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -44,6 +45,8 @@ export default function WelcomeScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const authContext = useAuth();
+  const user = authContext?.user;
 
   const handleScroll = (event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -51,23 +54,24 @@ export default function WelcomeScreen() {
     setCurrentPage(page);
   };
 
-  const goToNextPage = () => {
+  const completeOnboarding = async () => {
+    await AsyncStorage.setItem('hasSeenWelcome', 'true');
+    router.replace(user ? '/(tabs)' : '/auth/login');
+  };
+
+  const goToNextPage = async () => {
     if (currentPage < onboardingData.length - 1) {
       scrollViewRef.current?.scrollTo({
         x: SCREEN_WIDTH * (currentPage + 1),
         animated: true,
       });
     } else {
-      // Mark welcome as seen
-      AsyncStorage.setItem('hasSeenWelcome', 'true');
-      router.push('/auth/login');
+      await completeOnboarding();
     }
   };
 
-  const skipToLogin = () => {
-    // Mark welcome as seen
-    AsyncStorage.setItem('hasSeenWelcome', 'true');
-    router.push('/auth/login');
+  const skipToLogin = async () => {
+    await completeOnboarding();
   };
 
   return (

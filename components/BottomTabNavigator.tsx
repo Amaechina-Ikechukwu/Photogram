@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable } from 'react-native';
+import { ActivityIndicator, Pressable } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -8,7 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { getAuth, signOut } from 'firebase/auth';
 import { app } from '@/firebaseConfig';
 import { useToast } from '@/components/ToastProvider';
-import TabBarBackground, { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
+import TabBarBackground from '@/components/ui/TabBarBackground';
 import IndexScreen from '../app/(tabs)/index';
 
 const Tab = createBottomTabNavigator();
@@ -18,7 +18,6 @@ export default function BottomTabNavigator() {
   const [loggingOut, setLoggingOut] = useState(false);
   const toast = useToast();
   const auth = getAuth(app);
-  const bottomOverflow = useBottomTabOverflow();
 
   const onLogout = async () => {
     if (loggingOut) return;
@@ -37,9 +36,6 @@ export default function BottomTabNavigator() {
 
   return (
     <Tab.Navigator
-  // Make the navigator's scene avoid being covered by the floating tab bar.
-  // paddingBottom = bottom margin (20) + tab height (70) + any platform-specific overflow (safe area / tab bar height)
-  sceneContainerStyle={{ paddingBottom: 20 + 70 + (bottomOverflow ?? 0) }}
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: true,

@@ -244,6 +244,7 @@ export default function PhotosScreen() {
       <ThemedView style={styles.emptyWrap}>
         <ThemedText type="subtitle" style={{ marginBottom: 12 }}>
           {user ? 'No photos yet 📷' : 'Welcome to Photogram 📷'}
+          
         </ThemedText>
         {!user && (
           <Pressable

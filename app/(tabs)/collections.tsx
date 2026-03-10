@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { SectionList, Image, View, StyleSheet, ActivityIndicator, Dimensions, FlatList, Pressable, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { SectionList, Image, View, StyleSheet, ActivityIndicator, FlatList, Pressable, TextInput } from 'react-native';
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -12,8 +12,8 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { apiGet } from '@/utils/api';
 
-const { width } = Dimensions.get('window');
 const photoSize = 150;
+const PAGE_SIZE = 5;
 
 interface Photo {
   id: string;
@@ -46,6 +46,17 @@ interface Section {
   data: PhotoItem[];
 }
 
+function mergeSections(existingSections: Section[], incomingSections: Section[]) {
+  const map = new Map<string, PhotoItem[]>();
+  existingSections.forEach((section) => map.set(section.title, [...section.data]));
+  incomingSections.forEach((section) => {
+    const currentItems = map.get(section.title) || [];
+    map.set(section.title, [...currentItems, ...section.data]);
+  });
+
+  return Array.from(map.entries()).map(([title, data]) => ({ title, data }));
+}
+
 const CollectionPhoto = ({ item, index, sectionData }: { item: PhotoItem; index: number; sectionData: PhotoItem[] }) => {
   const [isLoading, setIsLoading] = useState(true);
   const colorScheme = useColorScheme();
@@ -55,8 +66,7 @@ const CollectionPhoto = ({ item, index, sectionData }: { item: PhotoItem; index:
     <Pressable
       onPress={() => {
         const postId = item.photo.id || '';
-        // Pass the photos (including user info) from this section so the detail screen can allow swiping within the section
-        const photosForSection = sectionData; 
+        const photosForSection = sectionData;
         router.push({
           pathname: `/photo/[id]` as any,
           params: {
@@ -68,8 +78,8 @@ const CollectionPhoto = ({ item, index, sectionData }: { item: PhotoItem; index:
       }}
       style={styles.photoContainer}
     >
-      <Image 
-        source={{ uri: item.photo.imageUrl }} 
+      <Image
+        source={{ uri: item.photo.imageUrl }}
         style={styles.photo}
         onLoadStart={() => setIsLoading(true)}
         onLoadEnd={() => setIsLoading(false)}
@@ -87,104 +97,99 @@ export default function CollectionsScreen() {
   const [sections, setSections] = useState<Section[]>([]);
   const [filteredSections, setFilteredSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [page, setPage] = useState<number>(1);
-  const [pageSize] = useState<number>(5);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const auth = useAuth();
   const user = auth?.user;
   const isAuthLoading = auth?.isLoading;
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
-  // Show auth modal if user is not authenticated
+  const fetchCategories = useCallback(async (pageNum: number = 1) => {
+    if (!user) return;
+
+    try {
+      if (pageNum === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      setError(null);
+      const token = await user.getIdToken();
+      const response = await apiGet(`/photos/categories?page=${pageNum}&pageSize=${PAGE_SIZE}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        retries: 1,
+        timeout: 30000,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        setError(`Failed to load collections: ${response.status === 401 ? 'This feature requires authentication' : errorText}`);
+        return;
+      }
+
+      const result = await response.json();
+      if ((result.success || result.sucess) && result.data) {
+        const data = result.data as Record<string, PhotoItem[]>;
+        const formattedSections: Section[] = Object.keys(data).map((key) => ({
+          title: key,
+          data: data[key] || [],
+        }));
+
+        setSections((prevSections) => (
+          pageNum === 1 ? formattedSections : mergeSections(prevSections, formattedSections)
+        ));
+        setPage(pageNum + 1);
+        setHasMore(formattedSections.length === PAGE_SIZE);
+      } else if (result && result.message) {
+        setError(result.message);
+      } else {
+        setError('Unexpected response from server');
+      }
+    } catch (e) {
+      console.error('Error fetching categories:', e);
+      setError('Failed to fetch categories');
+    } finally {
+      if (pageNum === 1) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
+    }
+  }, [user]);
+
   useEffect(() => {
     if (!user && !isAuthLoading) {
       setShowAuthModal(true);
       setLoading(false);
+      setSections([]);
+      setFilteredSections([]);
+      setPage(1);
+      setHasMore(true);
     }
   }, [user, isAuthLoading]);
 
   useEffect(() => {
-    // Don't fetch until auth state is determined and user is authenticated
     if (isAuthLoading || !user) return;
 
-    const fetchCategories = async (pageNum: number = 1) => {
-      try {
-        const token = user ? await user.getIdToken() : null;
-        const response = await apiGet(`/photos/categories?page=${pageNum}&pageSize=${pageSize}`, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          retries: 1,
-          timeout: 30000
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('API Error:', response.status, errorText);
-          setError(`Failed to load collections: ${response.status === 401 ? 'This feature requires authentication' : errorText}`);
-          setLoading(false);
-          return;
-        }
-        
-        const result = await response.json();
+    setPage(1);
+    setHasMore(true);
+    fetchCategories(1);
+  }, [fetchCategories, isAuthLoading, user]);
 
-        // Accept both 'success' and misspelled 'sucess' from API
-        if ((result.success || result.sucess) && result.data) {
-          const data = result.data as Record<string, PhotoItem[]>;
-          const formattedSections: Section[] = Object.keys(data).map((key) => ({
-            title: key,
-            data: data[key] || [],
-          }));
-
-          // If first page, replace, otherwise append for each category (merge by title)
-          if (pageNum === 1) {
-            setSections(formattedSections);
-          } else {
-            // Merge incoming sections into existing sections by title
-            setSections((prev) => {
-              const map = new Map<string, PhotoItem[]>();
-              prev.forEach((s) => map.set(s.title, [...s.data]));
-              formattedSections.forEach((s) => {
-                const existing = map.get(s.title) || [];
-                map.set(s.title, [...existing, ...s.data]);
-              });
-              return Array.from(map.entries()).map(([title, data]) => ({ title, data }));
-            });
-          }
-
-          // Pagination: if any category returned fewer than pageSize, we might be at the end
-          // (API semantics may vary; this is a conservative approach)
-          const allCounts = Object.values(data).reduce((acc, arr) => acc + (arr?.length || 0), 0);
-          if (allCounts < pageSize) {
-            setHasMore(false);
-          }
-        } else if (result && result.message) {
-          setError(result.message);
-        } else {
-          setError('Unexpected response from server');
-        }
-      } catch (e) {
-        console.error('Error fetching categories:', e);
-        setError('Failed to fetch categories');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCategories(page);
-  }, [isAuthLoading]);
-   const colorScheme = useColorScheme();
-      const colors = Colors[colorScheme ?? 'light'];
-
-  // Keep filteredSections synced with sections by default
   useEffect(() => {
     setFilteredSections(sections);
   }, [sections]);
 
-  // Filter sections and photos by category title and photo tags
   useEffect(() => {
     const q = (searchQuery || '').toLowerCase().trim();
     if (!q) {
@@ -196,23 +201,22 @@ export default function CollectionsScreen() {
 
     const results: Section[] = sections
       .map((section) => {
-        // If the section title matches any term, include the whole section
-        const titleMatches = terms.some((t) => section.title.toLowerCase().includes(t));
+        const titleMatches = terms.some((term) => section.title.toLowerCase().includes(term));
+        if (titleMatches) {
+          return { ...section };
+        }
 
-        if (titleMatches) return { ...section };
-
-        // Otherwise filter the photos in the section by tags matching any term
         const filteredData = section.data.filter((item) => {
           const tags = (item.photo.tags || []) as string[];
-          // also match category field on photo if present
           const category = (item.photo.category || '').toString().toLowerCase();
 
-          // If category matches any term, include
-          if (terms.some((t) => category.includes(t))) return true;
+          if (terms.some((term) => category.includes(term))) {
+            return true;
+          }
 
           return tags.some((tag) => {
             const lower = tag.toLowerCase();
-            return terms.some((t) => lower.includes(t));
+            return terms.some((term) => lower.includes(term));
           });
         });
 
@@ -222,17 +226,22 @@ export default function CollectionsScreen() {
 
         return null;
       })
-      .filter((s): s is Section => s !== null && s.data && s.data.length > 0);
+      .filter((section): section is Section => section !== null && section.data.length > 0);
 
     setFilteredSections(results);
   }, [searchQuery, sections]);
 
-  // renderItem is defined inside renderSectionHeader so it can capture section context
+  const loadMoreSections = useCallback(() => {
+    if (!user || loading || loadingMore || !hasMore) {
+      return;
+    }
+
+    fetchCategories(page);
+  }, [fetchCategories, hasMore, loading, loadingMore, page, user]);
 
   const renderSectionHeader = ({ section }: { section: Section }) => (
     <View>
       <ThemedText type="subtitle" style={styles.sectionHeader}>{section.title}</ThemedText>
-      {/* Render photos for this section; tapping opens the full-screen photo detail */}
       <FlatList
         horizontal
         data={section.data}
@@ -258,8 +267,8 @@ export default function CollectionsScreen() {
             Browse curated photo collections
           </ThemedText>
         </ThemedView>
-        <SignInPromptModal 
-          visible={showAuthModal} 
+        <SignInPromptModal
+          visible={showAuthModal}
           onClose={() => setShowAuthModal(false)}
           title="Sign In to View Collections"
           message="Sign in to browse and explore curated photo collections"
@@ -285,7 +294,7 @@ export default function CollectionsScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background  }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ThemedView style={styles.container}>
         <UploadProgressBar />
         <SectionList
@@ -293,9 +302,12 @@ export default function CollectionsScreen() {
           keyExtractor={(item, index) => (item.photo?.id || String(index))}
           renderItem={() => null}
           renderSectionHeader={renderSectionHeader}
+          onEndReached={loadMoreSections}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={loadingMore ? <ActivityIndicator style={{ marginVertical: 20 }} /> : null}
           ListHeaderComponent={
             <ThemedView>
-              <View style={[styles.searchContainer, { backgroundColor: colors.background }] }>
+              <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
                 <View style={styles.searchInner}>
                   <Ionicons name="search" size={18} color={colors.icon} style={{ marginRight: 8 }} />
                   <TextInput
@@ -355,9 +367,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   sectionHeader: {
-    // paddingHorizontal: 16,
     paddingVertical: 12,
-    marginHorizontal:10
+    marginHorizontal: 10,
   },
   photoList: {
     paddingHorizontal: 16,

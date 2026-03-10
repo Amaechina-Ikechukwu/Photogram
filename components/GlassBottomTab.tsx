@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { MaterialIcons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
@@ -70,7 +69,7 @@ export default function GlassBottomTab({ state, descriptors, navigation }: Botto
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}
               accessibilityLabel={options.tabBarAccessibilityLabel}
-              testID={options.tabBarTestID}
+              testID={options.tabBarButtonTestID}
               onPress={onPress}
               onLongPress={onLongPress}
               style={styles.tab}

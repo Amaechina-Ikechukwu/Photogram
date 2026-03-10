@@ -20,6 +20,12 @@ const imageSize = (width - 32) / 3;
 
 const UPLOAD_WELCOME_KEY = 'hasSeenUploadWelcome';
 
+type LoadImagesOptions = {
+  after?: string;
+  album?: MediaLibrary.Album | null;
+  reset?: boolean;
+};
+
 export default function UploadScreen() {
   const [images, setImages] = useState<MediaLibrary.Asset[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -42,7 +48,6 @@ export default function UploadScreen() {
   const authContext = useAuth();
   const user = authContext?.user;
 
-  // Check if user has seen the welcome modal
   useEffect(() => {
     const checkWelcomeStatus = async () => {
       try {
@@ -62,7 +67,6 @@ export default function UploadScreen() {
     }
   }, [user]);
 
-  // Show auth modal if user is not authenticated
   useEffect(() => {
     if (!user && !authContext?.isLoading) {
       setShowAuthModal(true);
@@ -89,18 +93,52 @@ export default function UploadScreen() {
     try {
       await AsyncStorage.setItem(UPLOAD_WELCOME_KEY, 'true');
       setShowWelcomeModal(false);
-      // Trigger permission request after closing modal
-      requestPermissions();
     } catch (error) {
       console.error('Error saving welcome status:', error);
       setShowWelcomeModal(false);
     }
   };
 
+  const loadAlbums = async () => {
+    try {
+      const albumsResult = await MediaLibrary.getAlbumsAsync({
+        includeSmartAlbums: true,
+      });
+      setAlbums(albumsResult);
+      console.log(`Found ${albumsResult.length} albums`);
+    } catch (error) {
+      console.error('Error loading albums:', error);
+    }
+  };
+
+  const loadImages = async ({ after, album = selectedAlbum, reset = false }: LoadImagesOptions = {}) => {
+    if (loadingMore || (!reset && !hasNextPage)) return;
+
+    try {
+      setLoadingMore(true);
+      const assetsResult = await MediaLibrary.getAssetsAsync({
+        first: 100,
+        after,
+        sortBy: [[MediaLibrary.SortBy.creationTime, false]],
+        mediaType: [MediaLibrary.MediaType.photo],
+        ...(album && { album }),
+      });
+      
+      console.log(`Loaded ${assetsResult.assets.length} images, hasNextPage: ${assetsResult.hasNextPage}`);
+      setImages((prev) => (after ? [...prev, ...assetsResult.assets] : assetsResult.assets));
+      setHasNextPage(assetsResult.hasNextPage);
+      setEndCursor(assetsResult.endCursor);
+    } catch (error) {
+      console.error('Error loading images:', error);
+      Alert.alert('Error', 'Failed to load images from your photo library');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const requestPermissions = async () => {
     try {
-      // Request full media library permissions (includes all folders)
-      const { status, canAskAgain, granted, accessPrivileges } = await MediaLibrary.requestPermissionsAsync(true);
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
       setPermissionStatus(status);
       
       if (status !== 'granted') {
@@ -112,7 +150,6 @@ export default function UploadScreen() {
         return;
       }
 
-      // Request ACCESS_MEDIA_LOCATION permission on Android 10+ (API 29+)
       if (Platform.OS === 'android' && Platform.Version >= 29) {
         try {
           const result = await PermissionsAndroid.request(
@@ -132,56 +169,17 @@ export default function UploadScreen() {
       }
 
       await loadAlbums();
-      await loadImages();
+      await loadImages({ reset: true });
     } catch (error) {
       console.error('Permission error:', error);
       Alert.alert('Error', 'Failed to request permissions');
     }
   };
 
-  const loadAlbums = async () => {
-    try {
-      const albumsResult = await MediaLibrary.getAlbumsAsync({
-        includeSmartAlbums: true,
-      });
-      setAlbums(albumsResult);
-      console.log(`Found ${albumsResult.length} albums`);
-    } catch (error) {
-      console.error('Error loading albums:', error);
-    }
-  };
-
-  const loadImages = async (after?: string) => {
-    if (loadingMore || !hasNextPage) return;
-
-    try {
-      setLoadingMore(true);
-      let assetsResult;
-      assetsResult = await MediaLibrary.getAssetsAsync({
-        first: 100,
-        after,
-        sortBy: [[MediaLibrary.SortBy.creationTime, false]], // false = descending (newest first)
-        mediaType: [MediaLibrary.MediaType.photo],
-        // Filter by album if one is selected, otherwise show all
-        ...(selectedAlbum && { album: selectedAlbum }),
-      });
-      
-      console.log(`Loaded ${assetsResult.assets.length} images, hasNextPage: ${assetsResult.hasNextPage}`);
-      setImages(prev => (after ? [...prev, ...assetsResult.assets] : assetsResult.assets));
-      setHasNextPage(assetsResult.hasNextPage);
-      setEndCursor(assetsResult.endCursor);
-    } catch (error) {
-      console.error('Error loading images:', error);
-      Alert.alert('Error', 'Failed to load images from your photo library');
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
   const toggleSelection = (assetId: string) => {
-    setSelectedImages(prev => {
+    setSelectedImages((prev) => {
       if (prev.includes(assetId)) {
-        return prev.filter(item => item !== assetId);
+        return prev.filter((item) => item !== assetId);
       }
 
       if (prev.length >= 3) {
@@ -194,7 +192,7 @@ export default function UploadScreen() {
   };
 
   const handleUpload = () => {
-    const selectedAssets = images.filter(img => selectedImages.includes(img.id));
+    const selectedAssets = images.filter((img) => selectedImages.includes(img.id));
     setImagesToUpload(selectedAssets);
     router.push('/upload/confirmation');
   };
@@ -206,12 +204,10 @@ export default function UploadScreen() {
     setHasNextPage(true);
     setEndCursor(undefined);
     setSelectedImages([]);
-    // Reload images with new album filter
-    await loadImages();
+    await loadImages({ album, reset: true });
   };
 
-  const renderItem = ({ item, index }: { item: MediaLibrary.Asset | 'album-selector'; index: number }) => {
-    // Special cell for album selector
+  const renderItem = ({ item }: { item: MediaLibrary.Asset | 'album-selector' }) => {
     if (item === 'album-selector') {
       return (
         <Pressable
@@ -237,8 +233,8 @@ export default function UploadScreen() {
         style={styles.imageContainer}
         disabled={disabled}
       >
-        <Image 
-          source={{ uri: item.uri }} 
+        <Image
+          source={{ uri: item.uri }}
           style={styles.image}
           contentFit="cover"
           cachePolicy="memory-disk"
@@ -288,8 +284,8 @@ export default function UploadScreen() {
                 Share your beautiful moments with the Photogram community
               </ThemedText>
             </ThemedView>
-            <SignInPromptModal 
-              visible={showAuthModal} 
+            <SignInPromptModal
+              visible={showAuthModal}
               onClose={() => setShowAuthModal(false)}
               title="Sign In to Upload"
               message="Sign in to upload and share your photos with the Photogram community"
@@ -332,21 +328,20 @@ export default function UploadScreen() {
             <FlatList
               data={['album-selector' as const, ...images]}
               renderItem={renderItem}
-              keyExtractor={(item, index) => item === 'album-selector' ? 'album-selector' : item.id}
+              keyExtractor={(item) => item === 'album-selector' ? 'album-selector' : item.id}
               numColumns={3}
               contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100 }}
-              onEndReached={() => loadImages(endCursor)}
+              onEndReached={() => loadImages({ after: endCursor })}
               onEndReachedThreshold={0.5}
               ListFooterComponent={loadingMore ? <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} /> : null}
             />
 
-            {/* Album Picker Modal */}
             {showAlbumPicker && (
-              <Pressable 
+              <Pressable
                 style={styles.modalOverlay}
                 onPress={() => setShowAlbumPicker(false)}
               >
-                <Pressable style={styles.albumPickerModal} onPress={e => e.stopPropagation()}>
+                <Pressable style={styles.albumPickerModal} onPress={(e) => e.stopPropagation()}>
                   <ThemedView style={styles.albumPickerContent}>
                     <ThemedText type="subtitle" style={styles.albumPickerTitle}>Select Album</ThemedText>
                     
@@ -361,7 +356,7 @@ export default function UploadScreen() {
 
                     <FlatList
                       data={albums}
-                      keyExtractor={album => album.id}
+                      keyExtractor={(album) => album.id}
                       renderItem={({ item: album }) => (
                         <Pressable
                           onPress={() => handleAlbumSelect(album)}

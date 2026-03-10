@@ -142,7 +142,7 @@ export default function UploadWelcomeModal({
               />
               <ThemedText style={styles.noteText}>
                 All uploads are public and can be viewed by anyone in the community. 
-                Please only share photos you're comfortable making public.
+                Please only share photos you&apos;re comfortable making public.
               </ThemedText>
             </View>
 
@@ -157,7 +157,7 @@ export default function UploadWelcomeModal({
                 onPress={onContinue}
               >
                 <ThemedText style={[styles.buttonText, styles.primaryButtonText]}>
-                  Got it, Let's Upload!
+                  Got it, Let&apos;s Upload!
                 </ThemedText>
               </Pressable>
 
@@ -268,7 +268,7 @@ export default function UploadWelcomeModal({
                   onPress={onContinue}
                 >
                   <ThemedText style={[styles.buttonText, styles.primaryButtonText]}>
-                    Got it, Let's Upload!
+                    Got it, Let&apos;s Upload!
                   </ThemedText>
                 </Pressable>
 

@@ -2,7 +2,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Image, StyleSheet, View, ScrollView, TextInput, TouchableOpacity, useColorScheme, Animated, Keyboard, KeyboardAvoidingView, Platform, Modal, FlatList, RefreshControl } from "react-native";
+import { ActivityIndicator, Image, StyleSheet, View, TextInput, TouchableOpacity, useColorScheme, Animated, Keyboard, Platform, Modal, FlatList, RefreshControl } from "react-native";
 import ImageViewing from "react-native-image-viewing";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
@@ -34,6 +34,7 @@ type Photo = {
 
 
 export default function ProfileScreen() {
+    const PAGE_SIZE = 10;
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [photos, setPhotos] = useState<Photo[]>([]);
     const [filteredPhotos, setFilteredPhotos] = useState<Photo[]>([]);
@@ -55,34 +56,7 @@ export default function ProfileScreen() {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
 
-    useEffect(() => {
-        if (!user && !authContext?.isLoading) {
-            setShowAuthModal(true);
-            setLoading(false);
-            setProfile(null);
-            setPhotos([]);
-            setFilteredPhotos([]);
-        } else if (user) {
-            fetchProfile();
-        }
-    }, [user, authContext?.isLoading]);
-
-    // Refetch photos when screen comes into focus and show auth modal if not signed in
-    useFocusEffect(
-        useCallback(() => {
-            if (user) {
-                setHasMore(true);
-                setPage(1);
-                fetchPhotos(1);
-            } else if (!authContext?.isLoading) {
-                // Show auth modal when user navigates to profile while not signed in
-                setShowAuthModal(true);
-                setLoading(false);
-            }
-        }, [user, authContext?.isLoading])
-    );
-
-    const fetchProfile = async () => {
+    const fetchProfile = useCallback(async () => {
         if (!user) return;
         
         try {
@@ -102,17 +76,17 @@ export default function ProfileScreen() {
         } catch (error) {
             console.error("Failed to fetch profile:", error);
         }
-    };
+    }, [user]);
 
-    const fetchPhotos = async (pageNum: number) => {
-        if (!user || loadingMore) return;
+    const fetchPhotos = useCallback(async (pageNum: number) => {
+        if (!user || (pageNum > 1 && loadingMore)) return;
         
         if (pageNum === 1) setLoading(true);
         else setLoadingMore(true);
 
         try {
             const token = await user.getIdToken();
-            const response = await apiGet(`/users/photos?page=${pageNum}&pageSize=10`, {
+            const response = await apiGet(`/users/photos?page=${pageNum}&pageSize=${PAGE_SIZE}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -123,15 +97,12 @@ export default function ProfileScreen() {
             const result = await response.json();
 
             if (result.success) {
-                if (result.data.length > 0) {
-                    const newPhotos = pageNum === 1 ? result.data : [...photos, ...result.data];
-                  
-                    setPhotos(newPhotos);
-                    setFilteredPhotos(newPhotos);
-                    setPage(pageNum + 1);
-                } else {
-                    setHasMore(false);
-                }
+                const nextPhotos = Array.isArray(result.data) ? result.data : [];
+                setPhotos((prevPhotos) => (
+                    pageNum === 1 ? nextPhotos : [...prevPhotos, ...nextPhotos]
+                ));
+                setPage(pageNum + 1);
+                setHasMore(nextPhotos.length === PAGE_SIZE);
             }
         } catch (error) {
             console.error("Failed to fetch photos:", error);
@@ -139,10 +110,38 @@ export default function ProfileScreen() {
             if (pageNum === 1) setLoading(false);
             else setLoadingMore(false);
         }
-    };
+    }, [loadingMore, user]);
+
+    useEffect(() => {
+        if (!user && !authContext?.isLoading) {
+            setShowAuthModal(true);
+            setLoading(false);
+            setProfile(null);
+            setPhotos([]);
+            setFilteredPhotos([]);
+        } else if (user) {
+            fetchProfile();
+        }
+    }, [user, authContext?.isLoading, fetchProfile]);
+
+    // Refetch photos when screen comes into focus and show auth modal if not signed in
+    useFocusEffect(
+        useCallback(() => {
+            if (user) {
+                setHasMore(true);
+                setPage(1);
+                fetchProfile();
+                fetchPhotos(1);
+            } else if (!authContext?.isLoading) {
+                // Show auth modal when user navigates to profile while not signed in
+                setShowAuthModal(true);
+                setLoading(false);
+            }
+        }, [user, authContext?.isLoading, fetchPhotos, fetchProfile])
+    );
 
     const loadMore = () => {
-        if (!user || !loadingMore && hasMore) {
+        if (!user || loading || loadingMore || !hasMore) {
             return;
         }
         fetchPhotos(page);
@@ -158,8 +157,7 @@ export default function ProfileScreen() {
         setPage(1);
         await Promise.all([fetchProfile(), fetchPhotos(1)]);
         setRefreshing(false);
-    }, [user]);
-
+    }, [user, fetchProfile, fetchPhotos]);
     // Keyboard event listeners
     useEffect(() => {
         const keyboardWillShow = Keyboard.addListener(
