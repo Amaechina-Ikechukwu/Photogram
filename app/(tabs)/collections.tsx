@@ -10,7 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { apiGet } from '@/utils/api';
+import { apiGet, parseApiJson } from '@/utils/api';
 
 const photoSize = 150;
 const PAGE_SIZE = 5;
@@ -45,6 +45,13 @@ interface Section {
   title: string;
   data: PhotoItem[];
 }
+
+type ApiEnvelope<T> = {
+  success?: boolean;
+  sucess?: boolean;
+  data?: T;
+  message?: string;
+};
 
 function mergeSections(existingSections: Section[], incomingSections: Section[]) {
   const map = new Map<string, PhotoItem[]>();
@@ -130,16 +137,9 @@ export default function CollectionsScreen() {
         timeout: 30000,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error:', response.status, errorText);
-        setError(`Failed to load collections: ${response.status === 401 ? 'This feature requires authentication' : errorText}`);
-        return;
-      }
-
-      const result = await response.json();
+      const result = await parseApiJson<ApiEnvelope<Record<string, PhotoItem[]>>>(response);
       if ((result.success || result.sucess) && result.data) {
-        const data = result.data as Record<string, PhotoItem[]>;
+        const data = result.data;
         const formattedSections: Section[] = Object.keys(data).map((key) => ({
           title: key,
           data: data[key] || [],
@@ -157,7 +157,7 @@ export default function CollectionsScreen() {
       }
     } catch (e) {
       console.error('Error fetching categories:', e);
-      setError('Failed to fetch categories');
+      setError(e instanceof Error ? e.message : 'Failed to fetch categories');
     } finally {
       if (pageNum === 1) {
         setLoading(false);
@@ -406,3 +406,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+

@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { BlurView } from 'expo-blur';
-import { apiGet, apiPost } from '@/utils/api';
+import { apiGet, apiPost, parseApiJson } from '@/utils/api';
 import { useAuth } from '@/context/AuthContext';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -113,8 +113,11 @@ const fetchPhotoById = async (photoId: string, token?: string) => {
         return null;
       }
 
-      const result = await response.json().catch(() => null);
-      const normalizedPhoto = normalizePublicPhoto(result?.data ?? result);
+      const result = await parseApiJson<Record<string, unknown> | PublicPhoto>(response);
+      const payload = result && typeof result === 'object' && 'data' in result
+        ? (result as { data?: unknown }).data
+        : result;
+      const normalizedPhoto = normalizePublicPhoto(payload);
       if (normalizedPhoto) {
         return normalizedPhoto;
       }

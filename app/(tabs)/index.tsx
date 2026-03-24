@@ -11,7 +11,7 @@ import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import PhotoItem from '@/components/PhotoItem';
-import { apiGet, apiPost } from '@/utils/api';
+import { apiGet, apiPost, parseApiJson } from '@/utils/api';
 import CommentsBottomSheet from '@/components/CommentsBottomSheet';
 
 interface PhotoData {
@@ -38,12 +38,21 @@ interface PublicPhoto {
   hasLiked: boolean;
 }
 
+type ApiEnvelope<T> = {
+  success?: boolean;
+  sucess?: boolean;
+  data?: T;
+  message?: string;
+  hasLiked?: boolean;
+};
+
 export default function PhotosScreen() {
   const [photos, setPhotos] = useState<PublicPhoto[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const colorScheme = useColorScheme();
@@ -55,37 +64,49 @@ export default function PhotosScreen() {
     if (pageNum > 1 && !hasMore) return;
     
     setLoading(true);
+    if (pageNum === 1) {
+      setErrorMessage(null);
+    }
     try {
       const response = await apiGet(`/photos/public?page=${pageNum}&pageSize=10`, {
         retries: 1,
         timeout: 30000
       });
-      const result = await response.json();
+      const result = await parseApiJson<ApiEnvelope<PublicPhoto[]>>(response);
       
 
       
       // Check for both 'success' and 'sucess' (typo in API)
-      if ((result.success || result.sucess) && result.data) {
-        if (result.data.length > 0) {
+      if ((result.success || result.sucess) && Array.isArray(result.data)) {
+        const nextPhotos = result.data;
+
+        if (nextPhotos.length > 0) {
           if (pageNum === 1) {
-            setPhotos(result.data);
+            setPhotos(nextPhotos);
           } else {
-            setPhotos(prevPhotos => [...prevPhotos, ...result.data]);
+            setPhotos(prevPhotos => [...prevPhotos, ...nextPhotos]);
           }
           setPage(pageNum + 1);
           
           // If we got fewer items than pageSize, we've reached the end
-          if (result.data.length < 10) {
+          if (nextPhotos.length < 10) {
             setHasMore(false);
           }
         } else {
           setHasMore(false);
         }
       } else {
+        const message = result.message || 'Unexpected response from server';
         console.error('API Error:', result);
+        if (pageNum === 1) {
+          setErrorMessage(message);
+        }
       }
     } catch (error) {
       console.error('Error fetching photos:', error);
+      if (pageNum === 1) {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to fetch photos.');
+      }
     } finally {
       setLoading(false);
     }
@@ -104,6 +125,7 @@ export default function PhotosScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setErrorMessage(null);
     setPage(1);
     setHasMore(true);
     setPhotos([]);
@@ -181,12 +203,13 @@ export default function PhotosScreen() {
               timeout: 15000
             });
 
-            const result = await res.json();
+            const result = await parseApiJson<ApiEnvelope<unknown>>(res);
 
             // If API responds with explicit hasLiked, ensure UI matches server
             if (result && typeof result.hasLiked === 'boolean') {
+              const confirmedHasLiked = result.hasLiked;
               setPhotos((prev) =>
-                prev.map((p) => (p.photo.id === postId ? { ...p, hasLiked: result.hasLiked } : p))
+                prev.map((p) => (p.photo.id === postId ? { ...p, hasLiked: confirmedHasLiked } : p))
               );
 
               // If server doesn't return updated totalLikes, keep optimistic change.
@@ -239,19 +262,38 @@ export default function PhotosScreen() {
         </ThemedView>
       );
     }
-    
+
+    if (errorMessage) {
+      return (
+        <ThemedView style={styles.emptyWrap}>
+          <Ionicons name="cloud-offline-outline" size={40} color={Colors[colorScheme ?? 'light'].icon} />
+          <ThemedText type="subtitle" style={{ marginTop: 12, marginBottom: 8 }}>
+            Feed unavailable
+          </ThemedText>
+          <ThemedText style={styles.emptyMessage}>
+            {errorMessage}
+          </ThemedText>
+          <Pressable
+            style={[styles.cta, { backgroundColor: Colors[colorScheme ?? 'light'].tint, marginTop: 16 }]}
+            onPress={onRefresh}
+          >
+            <ThemedText style={[styles.ctaText, { color: Colors[colorScheme ?? 'light'].background }]}>Try again</ThemedText>
+          </Pressable>
+        </ThemedView>
+      );
+    }
+
     return (
       <ThemedView style={styles.emptyWrap}>
         <ThemedText type="subtitle" style={{ marginBottom: 12 }}>
           {user ? 'No photos yet 📷' : 'Welcome to Photogram 📷'}
-          
         </ThemedText>
         {!user && (
           <Pressable
             style={[styles.cta, { backgroundColor: Colors[colorScheme ?? 'light'].tint }]}
             onPress={() => router.push('/auth/login')}
           >
-            <ThemedText style={[styles.ctaText, { color: Colors[colorScheme ?? 'light'].background }]}>
+            <ThemedText style={[styles.ctaText, { color: Colors[colorScheme ?? 'light'].background }]}> 
               {'Sign in to view photos'}
             </ThemedText>
           </Pressable>
@@ -335,6 +377,11 @@ const styles = StyleSheet.create({
   ctaText: {
     fontWeight: '600',
   },
+  emptyMessage: {
+    textAlign: 'center',
+    opacity: 0.75,
+    paddingHorizontal: 24,
+  },
   photoListContainer: {
     paddingHorizontal: 8,
     gap: 10,
@@ -355,3 +402,7 @@ const styles = StyleSheet.create({
   },
  
 });
+
+
+
+

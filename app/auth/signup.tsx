@@ -11,7 +11,11 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { SPLASH_IMAGE_URLS } from '@/constants/ImageUrls';
-import { configureGoogleSignIn } from '@/utils/googleSignIn';
+import {
+  configureGoogleSignIn,
+  getGoogleSignInDebugInfo,
+  getGoogleSignInErrorMessage,
+} from '@/utils/googleSignIn';
 
 configureGoogleSignIn();
 
@@ -45,9 +49,9 @@ export default function SignupScreen() {
       toast.show("Account created successfully!", { type: "success" });
       router.replace('/(tabs)');
     } catch (err: any) {
-      const msg = err?.message ?? "Google Sign-Up failed";
+      const msg = getGoogleSignInErrorMessage(err);
       toast.show(msg, { type: "error" });
-      console.error('Google Sign-Up Error:', err);
+      console.error('Google Sign-Up Error:', err, getGoogleSignInDebugInfo());
     } finally {
       setLoading(false);
     }

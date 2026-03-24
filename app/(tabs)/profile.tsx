@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from "@/constants/Colors";
 import UploadProgressBar from "@/components/UploadProgressBar";
 import SignInPromptModal from "@/components/SignInPromptModal";
-import { apiGet } from '@/utils/api';
+import { apiGet, parseApiJson } from '@/utils/api';
 import { router, useFocusEffect } from 'expo-router';
 
 type UserProfile = {
@@ -31,6 +31,12 @@ type Photo = {
     uid: string;
 };
 
+type ApiEnvelope<T> = {
+    success?: boolean;
+    sucess?: boolean;
+    data?: T;
+    message?: string;
+};
 
 
 export default function ProfileScreen() {
@@ -68,10 +74,11 @@ export default function ProfileScreen() {
                 retries: 1,
                 timeout: 30000
             });
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const result = await response.json();
-            if (result.success) {
+            const result = await parseApiJson<ApiEnvelope<UserProfile>>(response);
+            if ((result.success || result.sucess) && result.data) {
                 setProfile(result.data);
+            } else {
+                throw new Error(result.message || 'Unexpected response from server');
             }
         } catch (error) {
             console.error("Failed to fetch profile:", error);
@@ -93,16 +100,17 @@ export default function ProfileScreen() {
                 retries: 1,
                 timeout: 30000
             });
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const result = await response.json();
+            const result = await parseApiJson<ApiEnvelope<Photo[]>>(response);
 
-            if (result.success) {
+            if (result.success || result.sucess) {
                 const nextPhotos = Array.isArray(result.data) ? result.data : [];
                 setPhotos((prevPhotos) => (
                     pageNum === 1 ? nextPhotos : [...prevPhotos, ...nextPhotos]
                 ));
                 setPage(pageNum + 1);
                 setHasMore(nextPhotos.length === PAGE_SIZE);
+            } else {
+                throw new Error(result.message || 'Unexpected response from server');
             }
         } catch (error) {
             console.error("Failed to fetch photos:", error);
@@ -670,3 +678,5 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
 });
+
+
